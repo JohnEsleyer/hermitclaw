@@ -433,6 +433,29 @@
                         Settings
                     </h3>
 
+                    <!-- Operator Settings -->
+                    <div class="glass-card p-6 rounded-2xl mb-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                            <h4 class="text-lg font-bold text-white">Operator (Primary Admin)</h4>
+                        </div>
+                        <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-4">
+                            <p class="text-xs text-orange-300">The Operator receives all verification codes, HITL approval requests, and delegation requests. Set this to your Telegram User ID.</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <label class="text-xs font-mono text-slate-400">OPERATOR TELEGRAM ID</label>
+                                    <button onclick="alert('Send /start to @userinfobot on Telegram to get your User ID')" class="text-slate-400 hover:text-orange-500 transition-colors" title="How to find my ID?">
+                                        <i data-lucide="help-circle" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <input type="text" id="setting-operator_telegram_id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., 123456789">
+                                <p class="text-xs text-slate-500 mt-1">Required for agent verification and HITL approvals</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- General Settings -->
                     <div class="glass-card p-6 rounded-2xl mb-6">
                         <div class="flex items-center gap-3 mb-6">
@@ -1147,6 +1170,9 @@ cloudflared tunnel url hermitclaw
                 if (res.status === 401) return logout();
                 const settings = await res.json();
 
+                // Operator settings
+                document.getElementById('setting-operator_telegram_id').value = settings.operator_telegram_id || '';
+
                 // General settings
                 document.getElementById('setting-public_url').value = settings.public_url || '';
                 document.getElementById('setting-hitl_enabled').checked = settings.hitl_enabled === 'true';
@@ -1185,6 +1211,7 @@ cloudflared tunnel url hermitclaw
 
         async function saveSettings() {
             const settings = {
+                operator_telegram_id: document.getElementById('setting-operator_telegram_id').value,
                 public_url: document.getElementById('setting-public_url').value,
                 hitl_enabled: document.getElementById('setting-hitl_enabled').checked ? 'true' : 'false',
                 default_daily_limit: document.getElementById('setting-default_daily_limit').value,
