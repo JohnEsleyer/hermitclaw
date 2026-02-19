@@ -177,6 +177,10 @@
                     <i data-lucide="grid" class="w-5 h-5"></i>
                     <span class="font-semibold">Agents</span>
                 </a>
+                <a href="#" onclick="showSection('cubicles')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="box" class="w-5 h-5"></i>
+                    <span>Cubicles</span>
+                </a>
                 <a href="#" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="file-text" class="w-5 h-5"></i>
                     <span>Audit Logs</span>
@@ -265,6 +269,40 @@
                     </h3>
 
                     <div id="agent-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    </div>
+                </div>
+
+                <!-- Cubicles Section -->
+                <div id="section-cubicles" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="box" class="w-5 h-5 text-orange-500"></i>
+                            Running Cubicles
+                        </h3>
+                        <button onclick="loadCubicles()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Refresh
+                        </button>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-800/50 text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-mono">CONTAINER ID</th>
+                                    <th class="px-4 py-3 text-left font-mono">IMAGE</th>
+                                    <th class="px-4 py-3 text-left font-mono">STATUS</th>
+                                    <th class="px-4 py-3 text-left font-mono">CREATED</th>
+                                    <th class="px-4 py-3 text-left font-mono">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cubicles-tbody" class="divide-y divide-slate-800">
+                            </tbody>
+                        </table>
+                        <div id="cubicles-empty" class="p-8 text-center text-slate-500 hidden">
+                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+                            <p>No running cubicles. Spawn an agent to create a cubicle.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -868,10 +906,12 @@ cloudflared tunnel url hermitclaw
             document.getElementById('section-settings').classList.add('hidden');
             document.getElementById('section-metrics').classList.add('hidden');
             document.getElementById('section-allowlist').classList.add('hidden');
+            document.getElementById('section-cubicles').classList.add('hidden');
             document.getElementById('section-' + section).classList.remove('hidden');
 
             const titles = {
                 'agents': 'Mission Control',
+                'cubicles': 'Running Cubicles',
                 'audit': 'Audit Logs',
                 'settings': 'Settings',
                 'metrics': 'System Metrics',
@@ -883,6 +923,7 @@ cloudflared tunnel url hermitclaw
             if (section === 'metrics') loadMetrics();
             if (section === 'allowlist') loadAllowlist();
             if (section === 'settings') loadSettings();
+            if (section === 'cubicles') loadCubicles();
         }
 
         const PROVIDER_MODELS = {
@@ -1097,6 +1138,62 @@ cloudflared tunnel url hermitclaw
                 document.getElementById('stat-agents').innerText = data.totalAgents;
                 document.getElementById('stat-spend').innerText = '$' + data.totalSpendToday.toFixed(4);
             } catch (e) {}
+        }
+
+        async function loadCubicles() {
+            try {
+                const res = await fetch('/api/containers');
+                if(res.status === 401) return logout();
+                const containers = await res.json();
+                const tbody = document.getElementById('cubicles-tbody');
+                const empty = document.getElementById('cubicles-empty');
+
+                const hermitContainers = containers.filter(c => 
+                    c.Image && (c.Image.startsWith('hermit/') || c.Image.startsWith('hermit-crab'))
+                );
+
+                if (hermitContainers.length === 0) {
+                    tbody.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    lucide.createIcons();
+                    return;
+                }
+
+                empty.classList.add('hidden');
+                tbody.innerHTML = hermitContainers.map(c => {
+                    const statusColor = c.State === 'running' ? 'text-green-400' : c.State === 'exited' ? 'text-red-400' : 'text-yellow-400';
+                    const statusIcon = c.State === 'running' ? '●' : '○';
+                    return `
+                        <tr class="hover:bg-white/5">
+                            <td class="px-4 py-3 font-mono text-slate-400">${c.Id.substring(0, 12)}</td>
+                            <td class="px-4 py-3">${c.Image}</td>
+                            <td class="px-4 py-3 ${statusColor} font-mono">${statusIcon} ${c.State.toUpperCase()}</td>
+                            <td class="px-4 py-3 text-slate-400">${c.Status}</td>
+                            <td class="px-4 py-3 flex gap-2">
+                                <button onclick="viewContainer('${c.Id}')" class="text-orange-500 hover:text-white text-xs">Terminal</button>
+                                <button onclick="stopContainer('${c.Id}')" class="text-red-400 hover:text-white text-xs">Stop</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            } catch (e) {
+                console.error('Failed to load cubicles:', e);
+            }
+        }
+
+        async function stopContainer(containerId) {
+            if (!confirm('Stop this container?')) return;
+            try {
+                const res = await fetch(`/api/containers/${containerId}/stop`, { method: 'POST' });
+                if (res.ok) {
+                    loadCubicles();
+                } else {
+                    alert('Failed to stop container');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
         }
 
         async function loadMetrics() {

@@ -282,7 +282,7 @@ impl LLMClient {
             parts: Vec<GooglePart>,
         }
 
-        #[derive(Serialize)]
+        #[derive(Serialize, Deserialize)]
         struct GooglePart {
             text: String,
         }

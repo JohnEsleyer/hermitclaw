@@ -310,6 +310,17 @@ export async function startServer() {
         return await listContainers();
     });
 
+    fastify.post('/api/containers/:id/stop', async (request: any, reply: any) => {
+        const containerId = request.params.id;
+        try {
+            const container = docker.getContainer(containerId);
+            await container.stop();
+            return { success: true };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
     fastify.get('/api/terminal/:containerId', { websocket: true }, async (connection: any, req: any) => {
         const containerId = req.params.containerId;
         

@@ -94,6 +94,16 @@ async function main() {
         return { message: 'Setting updated' };
     });
 
+    fastify.post('/api/settings/batch', async (request: any) => {
+        const settings = request.body;
+        for (const [key, value] of Object.entries(settings)) {
+            if (value !== undefined && value !== null) {
+                await setSetting(key, String(value));
+            }
+        }
+        return { success: true };
+    });
+
     fastify.get('/api/stats', async () => {
         const dockerOk = await checkDocker();
         const containers = await listContainers();

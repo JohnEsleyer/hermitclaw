@@ -35,8 +35,14 @@ export async function handleTelegramUpdate(token: string, update: TelegramUpdate
 
     const userId = update.message.from.id;
     if (!await isAllowed(userId)) {
-        console.log(`Unauthorized user: ${userId}`);
-        return null;
+        const username = update.message.from.username || 'unknown';
+        const firstName = update.message.from.first_name || '';
+        console.log(`[UNAUTHORIZED] Telegram user tried to message bot:`);
+        console.log(`  User ID: ${userId}`);
+        console.log(`  Username: @${username}`);
+        console.log(`  First Name: ${firstName}`);
+        console.log(`  Add this user to allowlist in dashboard to grant access.`);
+        return `Unauthorized access. Your Telegram User ID is: ${userId}\n\nPlease provide this ID to the administrator to get access.`;
     }
 
     if (!await canSpend(agent.id)) {
