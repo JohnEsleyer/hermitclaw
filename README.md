@@ -55,7 +55,7 @@ hermitclaw/
 ├── shell/               # Node.js orchestrator
 │   ├── src/
 │   │   ├── server.ts    # Fastify server + webhook handler
-│   │   ├── db.ts        # SQLite database (sql.js)
+│   │   ├── db.ts        # SQLite database (libSQL)
 │   │   ├── docker.ts    # Docker container orchestration
 │   │   ├── telegram.ts   # Telegram bot handler + HITL
 │   │   └── auth.ts      # User validation
