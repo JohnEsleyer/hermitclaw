@@ -6,6 +6,9 @@
     <title>HermitClaw Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -76,18 +79,29 @@
             background-image: radial-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 0);
             background-size: 20px 20px;
         }
+
+        #xterm-container {
+            height: 100%;
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .xterm-viewport::-webkit-scrollbar { width: 8px; }
+        .xterm-viewport::-webkit-scrollbar-track { background: #0c0a09; }
+        .xterm-viewport::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
 <body class="h-screen flex text-slate-200">
 
     <div class="scanline"></div>
 
-    <!-- Auth Screen (Login / Setup) -->
+    <!-- Auth Screen -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4">
         <div class="glass-card p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
             <div class="absolute -top-10 -right-10 opacity-10">
                 <svg viewBox="0 0 100 100" class="w-40 h-40 fill-orange-500">
-                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80 80 80C70 65 80 50C80 35 70 20 50 20Z"/>
+                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
                 </svg>
             </div>
 
@@ -121,22 +135,24 @@
         </div>
     </div>
 
-    <!-- Dashboard (Hidden by default) -->
+    <!-- Dashboard -->
     <div id="dashboard-ui" class="hidden flex w-full h-full">
-        <!-- Sidebar -->
         <aside class="w-64 glass-panel flex flex-col z-20 h-full fixed md:relative hidden md:flex">
             <div class="p-6 flex items-center space-x-3 border-b border-white/5">
                 <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
-                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z"/>
-                    <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
                 </svg>
                 <h1 class="font-bold tracking-tight text-lg text-white">HermitClaw</h1>
             </div>
 
             <nav class="flex-1 p-4 space-y-2">
-                <a href="#" class="flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
-                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                <a href="#" onclick="showSection('agents')" class="nav-item flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
+                    <i data-lucide="grid" class="w-5 h-5"></i>
                     <span class="font-semibold">Agents</span>
+                </a>
+                <a href="#" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <span>Audit Logs</span>
                 </a>
                 <a href="/api/stats" target="_blank" class="flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
@@ -156,12 +172,10 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="flex-1 flex flex-col relative z-10 overflow-hidden">
-            <!-- Header -->
             <header class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-sm">
                 <div>
-                    <h2 class="text-2xl font-bold text-white">Mission Control</h2>
+                    <h2 class="text-2xl font-bold text-white" id="page-title">Mission Control</h2>
                     <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span class="text-green-400">SECURE</span></p>
                 </div>
                 
@@ -173,64 +187,79 @@
                 </div>
             </header>
 
-            <!-- Content Scroll -->
             <div class="flex-1 overflow-y-auto p-8">
-                
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                    <div class="glass-card p-5 rounded-2xl">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="cpu" class="w-5 h-5"></i></div>
-                            <span class="text-xs font-mono text-slate-500">DOCKER</span>
+                <!-- Agents Section -->
+                <div id="section-agents">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">DOCKER</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-containers">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Active Cubicles</div>
                         </div>
-                        <div class="text-2xl font-bold text-white" id="stat-containers">0</div>
-                        <div class="text-xs text-slate-400 mt-1">Active Cubicles</div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">AGENTS</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-agents">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Registered Identities</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">SPEND (24H)</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-spend">$0.00</div>
+                            <div class="text-xs text-slate-400 mt-1">Total Compute Cost</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">SECURITY</span>
+                            </div>
+                            <div class="text-xl font-bold text-white">Secure</div>
+                            <div class="text-xs text-slate-400 mt-1">Containers Isolated</div>
+                        </div>
                     </div>
 
-                    <div class="glass-card p-5 rounded-2xl">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
-                            <span class="text-xs font-mono text-slate-500">AGENTS</span>
-                        </div>
-                        <div class="text-2xl font-bold text-white" id="stat-agents">0</div>
-                        <div class="text-xs text-slate-400 mt-1">Registered Identities</div>
-                    </div>
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="grid" class="w-5 h-5 text-orange-500"></i>
+                        Deployed Agents
+                    </h3>
 
-                    <div class="glass-card p-5 rounded-2xl">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
-                            <span class="text-xs font-mono text-slate-500">SPEND (24H)</span>
-                        </div>
-                        <div class="text-2xl font-bold text-white" id="stat-spend">$0.00</div>
-                        <div class="text-xs text-slate-400 mt-1">Total Compute Cost</div>
-                    </div>
-
-                    <div class="relative glass-card p-5 rounded-2xl overflow-hidden group">
-                        <div class="absolute -right-4 -bottom-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                             <svg viewBox="0 0 100 100" class="w-24 h-24 fill-orange-500">
-                                <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z" opacity="0.5"/>
-                                <path d="M15 30L25 40M85 30L75 40" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
-                             </svg>
-                        </div>
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
-                            <span class="text-xs font-mono text-slate-500">SECURITY</span>
-                        </div>
-                        <div class="text-xl font-bold text-white">Secure</div>
-                        <div class="text-xs text-slate-400 mt-1">Containers Isolated</div>
+                    <div id="agent-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     </div>
                 </div>
 
-                <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <i data-lucide="grid" class="w-5 h-5 text-orange-500"></i>
-                    Deployed Agents
-                </h3>
+                <!-- Audit Logs Section -->
+                <div id="section-audit" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-orange-500"></i>
+                        Audit Logs
+                    </h3>
 
-                <!-- Agent Grid -->
-                <div id="agent-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Agents injected by JS -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-800/50 text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-mono">TIMESTAMP</th>
+                                    <th class="px-4 py-3 text-left font-mono">AGENT</th>
+                                    <th class="px-4 py-3 text-left font-mono">COMMAND</th>
+                                    <th class="px-4 py-3 text-left font-mono">STATUS</th>
+                                    <th class="px-4 py-3 text-left font-mono">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-tbody" class="divide-y divide-slate-700/50">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-
             </div>
         </main>
     </div>
@@ -263,6 +292,10 @@
                         <option value="hermit/netsec:latest">hermit/netsec (Security Tools)</option>
                     </select>
                 </div>
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="new-require-approval" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
+                    <label for="new-require-approval" class="text-sm text-slate-300">Require approval for dangerous commands (HITL)</label>
+                </div>
             </div>
             <div class="p-6 pt-0 flex justify-end">
                 <button onclick="createAgent()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
@@ -272,10 +305,9 @@
         </div>
     </div>
 
-    <!-- Terminal/Chat Modal -->
+    <!-- Terminal Modal with xterm.js -->
     <div id="terminal-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="w-full max-w-4xl h-[80vh] bg-[#0c0a09] border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden font-mono text-sm relative">
-            <!-- Terminal Header -->
+        <div class="w-full max-w-4xl h-[80vh] bg-[#0c0a09] border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
                 <div class="flex items-center gap-2">
                     <div class="w-3 h-3 rounded-full bg-red-500"></div>
@@ -283,21 +315,14 @@
                     <div class="w-3 h-3 rounded-full bg-green-500"></div>
                     <span id="term-title" class="ml-2 text-slate-400">root@hermitclaw:~</span>
                 </div>
-                <button onclick="closeTerminal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <div class="flex items-center gap-2">
+                    <button onclick="attachTerminal()" class="text-orange-500 hover:text-white text-sm" title="Attach to container">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="closeTerminal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
             </div>
-
-            <!-- Output Area -->
-            <div id="term-output" class="flex-1 p-4 overflow-y-auto terminal-output space-y-2 text-slate-300">
-                <div class="text-orange-500">HERMITCLAW v1.0.0 - Secure Shell Connection Established.</div>
-                <div class="text-slate-500">Type a command to spawn the agent instance...</div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="p-4 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
-                <span class="text-green-500 font-bold">➜</span>
-                <input type="text" id="term-input" class="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-slate-600" placeholder="Send instructions to agent..." autocomplete="off">
-                <button onclick="sendTerminalCommand()" class="text-orange-500 hover:text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
-            </div>
+            <div id="xterm-container"></div>
         </div>
     </div>
 
@@ -305,6 +330,10 @@
         lucide.createIcons();
         let authState = 'loading';
         let currentAgentId = null;
+        let currentContainerId = null;
+        let term = null;
+        let fitAddon = null;
+        let ws = null;
 
         async function init() {
             try {
@@ -338,7 +367,28 @@
             document.getElementById('dashboard-ui').classList.remove('hidden');
             loadStats();
             loadAgents();
-            setInterval(() => { loadStats(); loadAgents(); }, 10000);
+            loadAuditLogs();
+            setInterval(() => { 
+                loadStats(); 
+                loadAgents(); 
+            }, 10000);
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
+                el.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+            });
+            event.target.closest('.nav-item').classList.add('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
+            event.target.closest('.nav-item').classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+
+            document.getElementById('section-agents').classList.add('hidden');
+            document.getElementById('section-audit').classList.add('hidden');
+            document.getElementById('section-' + section).classList.remove('hidden');
+
+            document.getElementById('page-title').innerText = section === 'agents' ? 'Mission Control' : 'Audit Logs';
+
+            if (section === 'audit') loadAuditLogs();
         }
 
         async function handleAuth(e) {
@@ -384,7 +434,7 @@
                 if(res.status === 401) return logout();
                 const data = await res.json();
                 document.getElementById('stat-containers').innerText = data.activeContainers;
-                document.getElementById('stat-agents').innerText = data.agentsCount;
+                document.getElementById('stat-agents').innerText = data.totalAgents;
                 document.getElementById('stat-spend').innerText = '$' + data.totalSpendToday.toFixed(4);
             } catch (e) {}
         }
@@ -400,6 +450,7 @@
                 agents.forEach(agent => {
                     const percent = (agent.budget.current_spend_usd / agent.budget.daily_limit_usd) * 100;
                     const color = percent > 90 ? 'bg-red-500' : 'bg-green-500';
+                    const hitlBadge = agent.require_approval ? '<span class="ml-2 text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">HITL</span>' : '';
 
                     const card = `
                         <div class="glass-card rounded-2xl p-6 relative group overflow-hidden">
@@ -411,7 +462,7 @@
                                 <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-3">
                                     <span class="text-2xl">🦀</span>
                                 </div>
-                                <h3 class="text-xl font-bold text-white">${agent.name}</h3>
+                                <h3 class="text-xl font-bold text-white">${agent.name} ${hitlBadge}</h3>
                                 <p class="text-xs text-orange-400 font-mono mt-1">${agent.role}</p>
                             </div>
 
@@ -433,8 +484,8 @@
                                 <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
                                     <i data-lucide="terminal" class="w-4 h-4"></i> Terminal
                                 </button>
-                                <button class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
-                                        <i data-lucide="settings" class="w-4 h-4"></i> Config
+                                <button onclick="editAgent(${agent.id})" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
+                                    <i data-lucide="settings" class="w-4 h-4"></i> Config
                                 </button>
                             </div>
                         </div>
@@ -445,25 +496,76 @@
             } catch(e) {}
         }
 
+        async function loadAuditLogs() {
+            try {
+                const res = await fetch('/api/audit?limit=50');
+                if(res.status === 401) return logout();
+                const logs = await res.json();
+                const agents = await fetch('/api/agents').then(r => r.json());
+                const agentMap = {};
+                agents.forEach(a => agentMap[a.id] = a.name);
+
+                const tbody = document.getElementById('audit-tbody');
+                tbody.innerHTML = '';
+
+                logs.forEach(log => {
+                    const statusColor = log.status === 'approved' ? 'text-green-400' : log.status === 'denied' ? 'text-red-400' : 'text-yellow-400';
+                    const row = `
+                        <tr class="hover:bg-white/5">
+                            <td class="px-4 py-3 font-mono text-slate-400">${new Date(log.created_at).toLocaleString()}</td>
+                            <td class="px-4 py-3">${agentMap[log.agent_id] || 'Unknown'}</td>
+                            <td class="px-4 py-3 font-mono text-xs truncate max-w-xs" title="${log.command}">${log.command}</td>
+                            <td class="px-4 py-3 ${statusColor} font-mono">${log.status.toUpperCase()}</td>
+                            <td class="px-4 py-3">
+                                <button onclick="viewContainer('${log.container_id}')" class="text-orange-500 hover:text-white text-xs">View Terminal</button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch(e) {
+                console.error('Failed to load audit logs:', e);
+            }
+        }
+
         async function createAgent() {
             const name = document.getElementById('new-name').value;
             const role = document.getElementById('new-role').value;
             const token = document.getElementById('new-token').value;
             const image = document.getElementById('new-image').value;
+            const requireApproval = document.getElementById('new-require-approval').checked ? 1 : 0;
 
             if(!name || !token) return alert('Name and Token required');
 
             await fetch('/api/agents', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, role, telegram_token: token, docker_image: image })
+                body: JSON.stringify({ name, role, telegram_token: token, docker_image: image, require_approval: requireApproval })
             });
 
             closeModal();
             loadAgents();
         }
 
+        async function editAgent(id) {
+            const agents = await fetch('/api/agents').then(r => r.json());
+            const agent = agents.find(a => a.id === id);
+            if (!agent) return;
+
+            document.getElementById('new-name').value = agent.name;
+            document.getElementById('new-role').value = agent.role;
+            document.getElementById('new-token').value = agent.telegram_token;
+            document.getElementById('new-image').value = agent.docker_image;
+            document.getElementById('new-require-approval').checked = agent.require_approval === 1;
+
+            document.getElementById('create-modal').classList.remove('hidden');
+        }
+
         function openModal() {
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-role').value = '';
+            document.getElementById('new-token').value = '';
+            document.getElementById('new-require-approval').checked = false;
             document.getElementById('create-modal').classList.remove('hidden');
         }
 
@@ -471,55 +573,126 @@
             document.getElementById('create-modal').classList.add('hidden');
         }
 
-        function openTerminal(id, name) {
+        async function openTerminal(id, name) {
             currentAgentId = id;
             document.getElementById('term-title').innerText = `ssh ${name.toLowerCase()}@hermitclaw`;
             document.getElementById('terminal-modal').classList.remove('hidden');
-            document.getElementById('term-output').innerHTML = `<div class="text-orange-500">Connecting to agent ${name}...</div>`;
+
+            if (!term) {
+                term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    theme: {
+                        background: '#0c0a09',
+                        foreground: '#f8fafc',
+                        cursor: '#ff6b35'
+                    }
+                });
+                fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+                term.open(document.getElementById('xterm-container'));
+                fitAddon.fit();
+
+                term.writeln('\x1b[38;5;208mHERMITCLAW v1.0.0 - Secure Shell Connection Established.\x1b[0m');
+                term.writeln('\x1b[90mClick "Link" button to attach to a running container\x1b[0m');
+            }
+        }
+
+        async function attachTerminal() {
+            const containers = await fetch('/api/containers').then(r => r.json());
+            if (!containers || containers.length === 0) {
+                term.writeln('\x1b[31mNo running containers found\x1b[0m');
+                return;
+            }
+
+            const runningContainer = containers[0];
+            currentContainerId = runningContainer.Id;
+
+            term.writeln(`\x1b[32mConnecting to ${runningContainer.Names[0]}...\x1b[0m`);
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${currentContainerId}`);
+
+            ws.onopen = () => {
+                term.writeln('\x1b[32mConnected!\x1b[0m');
+            };
+
+            ws.onmessage = (event) => {
+                const data = atob(event.data);
+                term.write(data);
+            };
+
+            ws.onclose = () => {
+                term.writeln('\x1b[33mDisconnected\x1b[0m');
+            };
+
+            ws.onerror = (err) => {
+                term.writeln('\x1b[31mConnection error\x1b[0m');
+                console.error(err);
+            };
+
+            term.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(btoa(data));
+                }
+            });
+        }
+
+        async function viewContainer(containerId) {
+            if (!term) {
+                term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    theme: {
+                        background: '#0c0a09',
+                        foreground: '#f8fafc',
+                        cursor: '#ff6b35'
+                    }
+                });
+                fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+                term.open(document.getElementById('xterm-container'));
+                fitAddon.fit();
+            }
+
+            document.getElementById('terminal-modal').classList.remove('hidden');
+            term.writeln(`\x1b[32mAttaching to container ${containerId.substring(0, 12)}...\x1b[0m`);
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${containerId}`);
+
+            ws.onopen = () => {
+                term.writeln('\x1b[32mConnected!\x1b[0m');
+            };
+
+            ws.onmessage = (event) => {
+                const data = atob(event.data);
+                term.write(data);
+            };
+
+            ws.onclose = () => {
+                term.writeln('\x1b[33mDisconnected\x1b[0m');
+            };
+
+            term.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(btoa(data));
+                }
+            });
         }
 
         function closeTerminal() {
-            document.getElementById('terminal-modal').classList.add('hidden');
-            currentAgentId = null;
-        }
-
-        async function sendTerminalCommand() {
-            const input = document.getElementById('term-input');
-            const cmd = input.value;
-            if(!cmd || !currentAgentId) return;
-
-            const outputDiv = document.getElementById('term-output');
-            outputDiv.innerHTML += `<div class="mt-2"><span class="text-green-500">➜</span> <span class="text-white">${cmd}</span></div>`;
-            input.value = '';
-
-            outputDiv.innerHTML += `<div class="text-slate-500 animate-pulse">Spawning container...</div>`;
-            outputDiv.scrollTop = outputDiv.scrollHeight;
-
-            try {
-                const res = await fetch(`/api/test-agent/${currentAgentId}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ message: cmd })
-                });
-                const data = await res.json();
-                
-                outputDiv.lastElementChild.remove();
-
-                if(data.error) {
-                    outputDiv.innerHTML += `<div class="text-red-500">${data.error}</div>`;
-                } else {
-                    const cleanOutput = data.output.replace(/\n/g, '<br>');
-                    outputDiv.innerHTML += `<div class="text-slate-300 font-mono text-xs mt-1 pl-4 border-l-2 border-slate-700">${cleanOutput}</div>`;
-                }
-            } catch(e) {
-                outputDiv.innerHTML += `<div class="text-red-500">Connection failed: ${e.message}</div>`;
+            if (ws) {
+                ws.close();
+                ws = null;
             }
-
-            outputDiv.scrollTop = outputDiv.scrollHeight;
+            document.getElementById('terminal-modal').classList.add('hidden');
         }
 
-        document.getElementById('term-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') sendTerminalCommand();
+        window.addEventListener('resize', () => {
+            if (fitAddon) fitAddon.fit();
         });
 
         init();

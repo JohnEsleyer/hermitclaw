@@ -35,3 +35,61 @@ pub fn can_execute_command(cmd: &str) -> bool {
         .iter()
         .any(|&a| base_cmd == a || base_cmd.starts_with(a))
 }
+
+pub fn is_dangerous_command(cmd: &str) -> bool {
+    let dangerous = [
+        "rm",
+        "nmap",
+        "curl",
+        "wget",
+        "dd",
+        "mkfs",
+        "fdisk",
+        "parted",
+        "shutdown",
+        "reboot",
+        "halt",
+        "poweroff",
+        "init",
+        "chmod",
+        "chown",
+        "chgrp",
+        "kill",
+        "killall",
+        "pkill",
+        "wget",
+        "curl",
+        "nc",
+        "netcat",
+        "socat",
+        "sudo",
+        "su",
+        "passwd",
+        "useradd",
+        "userdel",
+        "usermod",
+        "groupadd",
+        "groupdel",
+        "iptables",
+        "ufw",
+        "firewall-cmd",
+        "docker",
+        "podman",
+        "ssh",
+        "scp",
+        "sftp",
+        "base64",
+        "xxd",
+        "xxencode",
+    ];
+
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
+    if parts.is_empty() {
+        return false;
+    }
+
+    let base_cmd = parts[0];
+    dangerous
+        .iter()
+        .any(|&d| base_cmd == d || base_cmd.starts_with(d))
+}

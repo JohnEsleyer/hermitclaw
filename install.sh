@@ -1,29 +1,40 @@
 #!/bin/bash
 set -e
 
-echo "🐚 HermitClaw - Installing Your Private Agent Workforce"
+echo "🐚 HermitClaw Installation"
+echo "=========================="
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 check_command() {
     if ! command -v $1 &> /dev/null; then
-        echo "❌ $1 is required but not installed. Aborting."
-        exit 1
+        echo "❌ $1 is required but not installed."
+        return 1
     fi
+    return 0
 }
 
-echo "📋 Checking dependencies..."
-check_command docker
-check_command node
-check_command npm
-check_command sqlite3
+echo "🔍 Checking prerequisites..."
+MISSING=""
+check_command docker || MISSING="$MISSING docker"
+check_command node || MISSING="$MISSING node"  
+check_command npm || MISSING="$MISSING npm"
+
+if [ -n "$MISSING" ]; then
+    echo "Missing:$MISSING"
+    echo "Please install Docker, Node.js and npm first."
+    exit 1
+fi
 
 echo "📁 Setting up directories..."
 mkdir -p data/db data/history config/images
-mkdir -p shell/uploads dashboard/dist
+mkdir -p shell/uploads
 
 echo "📝 Creating environment file..."
 if [ ! -f shell/.env ]; then
     cp shell/.env.example shell/.env
-    echo "⚠️  Please edit shell/.env and add your API keys"
+    echo "✅ Created shell/.env - please add your API keys"
 fi
 
 echo "🔐 Setting up SQLite database..."
@@ -73,68 +84,69 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('default_model', 'anthropic/
 EOF
 echo "✅ Database initialized"
 
-echo "🦀 Building base Docker images..."
-docker build -t hermit/base:latest -f - . << 'EOF'
+echo "🦀 Building Docker images (this may take a few minutes)..."
+
+DOCKER="docker"
+if ! docker ps &>/dev/null; then
+    DOCKER="sudo docker"
+fi
+
+echo "  → Building hermit/base..."
+$DOCKER build -t hermit/base:latest -f - . << 'EOF'
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    jq \
-    sed \
-    gawk \
-    bash \
-    coreutils \
-    iputils-ping \
-    dnsutils \
+    curl jq sed gawk bash coreutils iputils-ping dnsutils \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 CMD ["/bin/bash"]
 EOF
 
-docker build -t hermit/python:latest -f - . << 'EOF'
+echo "  → Building hermit/python..."
+$DOCKER build -t hermit/python:latest -f - . << 'EOF'
 FROM python:3.11-slim
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    jq \
+RUN apt-get update && apt-get install -y --no-install-recommends curl jq \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir requests pandas numpy
 WORKDIR /workspace
 CMD ["python"]
 EOF
 
-docker build -t hermit/netsec:latest -f - . << 'EOF'
+echo "  → Building hermit/netsec..."
+$DOCKER build -t hermit/netsec:latest -f - . << 'EOF'
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    jq \
-    nmap \
-    iputils-ping \
-    dnsutils \
-    net-tools \
-    openssl \
+    curl jq nmap iputils-ping dnsutils net-tools openssl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 CMD ["/bin/bash"]
 EOF
 
-echo "🔨 Building HermitClaw Crab Agent..."
-docker build -t hermit-crab:latest crab/
+echo "  → Building hermit-crab (AI Agent)..."
+$DOCKER build -t hermit-crab:latest crab/
 
 echo "📦 Installing Node.js dependencies..."
-cd shell && npm install
-npm run build
+cd shell
+npm install --legacy-peer-deps 2>/dev/null || npm install
 
-echo "🌐 Building Dashboard..."
-cd ../dashboard && npm install
+npm install @fastify/cookie@^10.0.0 @fastify/static@^8.0.0 --legacy-peer-deps 2>/dev/null || true
+
 npm run build
+cd ..
+
+echo "📦 Building Dashboard..."
+mkdir -p shell/dashboard/dist
+cp -r dashboard/src/public/* shell/dashboard/dist/ 2>/dev/null || true
 
 echo ""
 echo "✅ INSTALLATION COMPLETE!"
-echo "========================================"
-echo "🌍 Dashboard: http://localhost:3000"
-echo "📱 Telegram Bots: Managed via Dashboard"
+echo "=========================="
 echo ""
-echo "Next steps:"
-echo "1. Edit shell/.env with your API keys"
-echo "2. Add your Telegram ID to config/allowlist.json"
-echo "3. Start: cd shell && npm start"
-echo "========================================"
+echo "🌍 To start HermitClaw:"
+echo "   cd shell && npm start"
+echo ""
+echo "   Then open: http://localhost:3000/dashboard/"
+echo ""
+echo "⚠️  Before using, edit shell/.env and add:"
+echo "   - OPENROUTER_API_KEY (or OPENAI_API_KEY)"
+echo "   - TELEGRAM_BOT_TOKEN"
+echo ""

@@ -11,10 +11,15 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - PORT=3000
+      - SURREAL_URL=ws://db:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASS=root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config:/app/config
       - ./data:/app/data
+    depends_on:
+      - db
     restart: unless-stopped
 
   crab:
@@ -24,3 +29,14 @@ services:
     image: hermit-crab:latest
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+
+  db:
+    image: surrealdb/surrealdb:v2.0.0-beta.1
+    ports:
+      - "8000:8000"
+    volumes:
+      - db-data:/data
+    restart: unless-stopped
+
+volumes:
+  db-data:
