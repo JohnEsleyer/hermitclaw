@@ -3,544 +3,835 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HermitClaw - Agent Management</title>
+    <title>HermitClaw Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
     <style>
-        :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-tertiary: #21262d;
-            --text-primary: #f0f6fc;
-            --text-secondary: #8b949e;
-            --accent: #58a6ff;
-            --accent-hover: #79c0ff;
-            --success: #3fb950;
-            --danger: #f85149;
-            --warning: #d29922;
-            --border: #30363d;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --crab-orange: #ff6b35;
+            --shell-gray: #1e293b;
+            --ocean-dark: #0f172a;
+            --term-green: #10b981;
+        }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
+            background-color: var(--ocean-dark);
+            color: #f8fafc;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
         }
 
-        .header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .crab-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
         }
 
-        .header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
-        .logo { font-size: 1.5rem; }
-
-        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            transition: all 0.3s ease;
         }
 
-        .stat-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
+        .glass-card:hover {
+            border-color: rgba(255, 107, 53, 0.4);
+            box-shadow: 0 10px 30px -10px rgba(255, 107, 53, 0.15);
         }
 
-        .stat-card .label { color: var(--text-secondary); font-size: 0.875rem; }
-        .stat-card .value { font-size: 2rem; font-weight: bold; margin-top: 0.5rem; }
-        .stat-card.success .value { color: var(--success); }
-        .stat-card.warning .value { color: var(--warning); }
-
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-        .tab {
-            padding: 0.75rem 1.5rem;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-        .tab:hover { color: var(--text-primary); }
-        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-        .card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .card h2 { font-size: 1.25rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-        .btn:hover { background: var(--bg-primary); border-color: var(--text-secondary); }
-        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn-primary:hover { background: var(--accent-hover); }
-        .btn-danger { color: var(--danger); border-color: var(--danger); }
-        .btn-danger:hover { background: var(--danger); color: #fff; }
-
-        .agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
-
-        .agent-card {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-        }
-
-        .agent-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-        .agent-name { font-size: 1.125rem; font-weight: 600; }
-        .agent-role { color: var(--text-secondary); font-size: 0.875rem; }
-        .agent-status { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .status-active { background: var(--success); }
-        .status-inactive { background: var(--danger); }
-
-        .agent-info { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
-        .budget-bar {
-            height: 4px;
-            background: var(--bg-primary);
-            border-radius: 2px;
-            margin-top: 0.5rem;
-            overflow: hidden;
-        }
-        .budget-fill {
-            height: 100%;
-            background: var(--success);
-            transition: width 0.3s;
-        }
-        .budget-fill.warning { background: var(--warning); }
-        .budget-fill.danger { background: var(--danger); }
-
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; }
-        .form-group input, .form-group select, .form-group textarea {
+        .scanline {
             width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-        }
-        .form-group textarea { min-height: 100px; resize: vertical; }
-
-        .modal {
+            height: 100px;
+            z-index: 0;
+            background: linear-gradient(0deg, rgba(255,107,53,0) 0%, rgba(255,107,53,0.03) 50%, rgba(255,107,53,0) 100%);
+            opacity: 0.1;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            bottom: 100%;
+            pointer-events: none;
+            animation: scanline 8s linear infinite;
         }
-        .modal.hidden { display: none; }
-        .modal-content {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 2rem;
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--ocean-dark); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--crab-orange); }
+
+        .terminal-output {
+            background-color: #0c0a09;
+            background-image: radial-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        #xterm-container {
+            height: 100%;
             width: 100%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .modal-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem; }
-
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; }
-        td { font-size: 0.875rem; }
-
-        .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
-
-        .test-output {
-            background: var(--bg-primary);
-            padding: 1rem;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.875rem;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 1rem;
+            padding: 8px;
+            box-sizing: border-box;
         }
 
-        .section { display: none; }
-        .section.active { display: block; }
+        .xterm-viewport::-webkit-scrollbar { width: 8px; }
+        .xterm-viewport::-webkit-scrollbar-track { background: #0c0a09; }
+        .xterm-viewport::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
-<body>
-    <header class="header">
-        <h1><span class="logo">🐚</span> HermitClaw</h1>
-        <div>
-            <span id="status" style="color: var(--text-secondary);">Loading...</span>
-        </div>
-    </header>
+<body class="h-screen flex text-slate-200">
 
-    <div class="container">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="label">Total Agents</div>
-                <div class="value" id="stat-agents">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Active Containers</div>
-                <div class="value" id="stat-containers">0</div>
-            </div>
-            <div class="stat-card success">
-                <div class="label">Allowlisted Users</div>
-                <div class="value" id="stat-users">0</div>
-            </div>
-            <div class="stat-card warning">
-                <div class="label">Today's Spend</div>
-                <div class="value" id="stat-spend">$0.00</div>
-            </div>
-        </div>
+    <div class="scanline"></div>
 
-        <div class="tabs">
-            <button class="tab active" data-tab="agents">Agents</button>
-            <button class="tab" data-tab="allowlist">Allowlist</button>
-            <button class="tab" data-tab="settings">Settings</button>
-        </div>
-
-        <div class="section active" id="section-agents">
-            <div class="card">
-                <h2>
-                    <span>Your AI Workforce</span>
-                    <button class="btn btn-primary" onclick="showCreateAgent()">+ New Agent</button>
-                </h2>
-                <div id="agents-grid" class="agent-grid"></div>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 opacity-10">
+                <svg viewBox="0 0 100 100" class="w-40 h-40 fill-orange-500">
+                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
+                </svg>
             </div>
-        </div>
 
-        <div class="section" id="section-allowlist">
-            <div class="card">
-                <h2>
-                    <span>Telegram Allowlist</span>
-                    <button class="btn btn-primary" onclick="showAddUser()">+ Add User</button>
-                </h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>User ID</th>
-                            <th>Username</th>
-                            <th>First Name</th>
-                            <th>Added</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="allowlist-table"></tbody>
-                </table>
+            <div class="mb-8 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-500/20 flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" class="w-10 h-10 fill-orange-500">
+                        <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
+                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-white mb-2">HermitClaw</h1>
+                <p id="auth-title" class="text-orange-500 font-mono text-sm">SYSTEM_LOCKED</p>
             </div>
-        </div>
 
-        <div class="section" id="section-settings">
-            <div class="card">
-                <h2>API Configuration</h2>
-                <div class="form-group">
-                    <label>Default Provider</label>
-                    <select id="setting-provider">
-                        <option value="openrouter">OpenRouter</option>
-                        <option value="openai">OpenAI</option>
+            <form id="auth-form" class="space-y-4" onsubmit="handleAuth(event)">
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">OPERATOR_ID</label>
+                    <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required autocomplete="off">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">ACCESS_KEY</label>
+                    <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required>
+                </div>
+                
+                <div id="auth-error" class="text-red-400 text-xs font-mono hidden text-center"></div>
+
+                <button type="submit" id="auth-btn" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20">
+                    Authenticate
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard-ui" class="hidden flex w-full h-full">
+        <aside class="w-64 glass-panel flex flex-col z-20 h-full fixed md:relative hidden md:flex">
+            <div class="p-6 flex items-center space-x-3 border-b border-white/5">
+                <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
+                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
+                </svg>
+                <h1 class="font-bold tracking-tight text-lg text-white">HermitClaw</h1>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" onclick="showSection('agents')" class="nav-item flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
+                    <i data-lucide="grid" class="w-5 h-5"></i>
+                    <span class="font-semibold">Agents</span>
+                </a>
+                <a href="#" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <span>Audit Logs</span>
+                </a>
+                <a href="/api/stats" target="_blank" class="flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                    <span>Metrics</span>
+                </a>
+                <a href="/api/allowlist" target="_blank" class="flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    <span>Allowlist</span>
+                </a>
+                <a href="#" onclick="showSection('settings')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="p-6">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col relative z-10 overflow-hidden">
+            <header class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-sm">
+                <div>
+                    <h2 class="text-2xl font-bold text-white" id="page-title">Mission Control</h2>
+                    <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span class="text-green-400">SECURE</span></p>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button onclick="openModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>Spawn Agent</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-8">
+                <!-- Agents Section -->
+                <div id="section-agents">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">DOCKER</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-containers">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Active Cubicles</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">AGENTS</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-agents">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Registered Identities</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">SPEND (24H)</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="stat-spend">$0.00</div>
+                            <div class="text-xs text-slate-400 mt-1">Total Compute Cost</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">SECURITY</span>
+                            </div>
+                            <div class="text-xl font-bold text-white">Secure</div>
+                            <div class="text-xs text-slate-400 mt-1">Containers Isolated</div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="grid" class="w-5 h-5 text-orange-500"></i>
+                        Deployed Agents
+                    </h3>
+
+                    <div id="agent-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    </div>
+                </div>
+
+                <!-- Audit Logs Section -->
+                <div id="section-audit" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-orange-500"></i>
+                        Audit Logs
+                    </h3>
+
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-800/50 text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-mono">TIMESTAMP</th>
+                                    <th class="px-4 py-3 text-left font-mono">AGENT</th>
+                                    <th class="px-4 py-3 text-left font-mono">COMMAND</th>
+                                    <th class="px-4 py-3 text-left font-mono">STATUS</th>
+                                    <th class="px-4 py-3 text-left font-mono">ACTIONS</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div id="section-settings" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="settings" class="w-5 h-5 text-orange-500"></i>
+                        Settings
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="webhook" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Telegram Webhooks</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Connect your Telegram bots to receive messages and control your agents.</p>
+                            <button onclick="openWebhookGuide()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm">
+                                <i data-lucide="book-open" class="w-4 h-4 inline mr-2"></i>
+                                Setup Guide
+                            </button>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="key" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">API Keys</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Configure your LLM provider API keys (OpenRouter, OpenAI).</p>
+                            <div class="text-xs font-mono text-slate-500 bg-slate-800 p-3 rounded">
+                                shell/.env
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="model" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Default Model</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Current: <span class="text-orange-400 font-mono">auto</span> (OpenRouter auto-selects best free model)</p>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="database" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Database</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Using libSQL (native SQLite) for fast, reliable storage.</p>
+                            <div class="text-xs font-mono text-slate-500">data/db/hermit.db</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div id="create-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden relative">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50">
+                <h3 class="text-lg font-bold text-white">Initialize New Agent</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">DESIGNATION (NAME)</label>
+                    <input type="text" id="new-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., Sherlock">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">ROLE DESCRIPTION</label>
+                    <input type="text" id="new-role" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., Security Researcher">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM TOKEN</label>
+                    <input type="password" id="new-token" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="From @BotFather">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">DOCKER IMAGE</label>
+                    <select id="new-image" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
+                        <option value="hermit/base:latest">hermit/base (General Tools)</option>
+                        <option value="hermit/python:latest">hermit/python (Data Analysis)</option>
+                        <option value="hermit/netsec:latest">hermit/netsec (Security Tools)</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Default Model</label>
-                    <input type="text" id="setting-model" placeholder="anthropic/claude-3-haiku">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="new-require-approval" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
+                    <label for="new-require-approval" class="text-sm text-slate-300">Require approval for dangerous commands (HITL)</label>
                 </div>
-                <div class="form-group">
-                    <label>API Keys Status</label>
-                    <div id="api-status" style="color: var(--text-secondary);"></div>
-                </div>
-                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+            <div class="p-6 pt-0 flex justify-end">
+                <button onclick="createAgent()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                    Deploy to Cubicle
+                </button>
             </div>
         </div>
     </div>
 
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Create Agent</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+    <!-- Terminal Modal with xterm.js -->
+    <div id="terminal-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-4xl h-[80vh] bg-[#0c0a09] border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span id="term-title" class="ml-2 text-slate-400">root@hermitclaw:~</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="attachTerminal()" class="text-orange-500 hover:text-white text-sm" title="Attach to container">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="closeTerminal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
             </div>
-            <div id="modal-body"></div>
+            <div id="xterm-container"></div>
+        </div>
+    </div>
+
+    <!-- Webhook Guide Modal -->
+    <div id="webhook-guide-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50 sticky top-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="webhook" class="w-5 h-5 text-blue-500"></i>
+                    Telegram Webhook Setup Guide
+                </h3>
+                <button onclick="closeWebhookGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-6 text-slate-300">
+                <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to send messages to your HermitClaw server instead of your bot polling for updates. It's the standard way to receive messages in production.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">1</span> Get Your Public URL</h4>
+                    <p class="text-sm text-slate-400 mb-3">Your server must be accessible from the internet. If running locally, use a tunnel service:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm text-green-400">
+# Using Cloudflare Tunnel (recommended)<br>
+curl -sL https://run.cloudflare.com/ | sh<br>
+cloudflared tunnel create hermitclaw<br>
+cloudflared tunnel url hermitclaw
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Or use <a href="https://ngrok.com" target="_blank" class="text-orange-400 hover:underline">ngrok</a>: <code class="bg-slate-800 px-1 rounded">ngrok http 3000</code></p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">2</span> Set Your Public URL in Dashboard</h4>
+                    <p class="text-sm text-slate-400 mb-3">Go to Settings and update the <code class="bg-slate-800 px-1 rounded">public_url</code> setting with your public URL (e.g., <code class="bg-slate-800 px-1 rounded">https://your-tunnel-url.cloudflare.net</code>)</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">3</span> Set the Webhook via API</h4>
+                    <p class="text-sm text-slate-400 mb-3">Run this command in your terminal:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
+<span class="text-blue-400">curl</span> -X POST \<br>
+&nbsp;&nbsp;"https://api.telegram.org/bot<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>/setWebhook" \<br>
+&nbsp;&nbsp;-d "url=<span class="text-green-400">&lt;YOUR_PUBLIC_URL&gt;</span>/webhook/<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>"
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Replace <code class="bg-slate-800 px-1 rounded">&lt;YOUR_BOT_TOKEN&gt;</code> with your Telegram bot token and <code class="bg-slate-800 px-1 rounded">&lt;YOUR_PUBLIC_URL&gt;</code> with your public URL.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">4</span> Verify It Works</h4>
+                    <p class="text-sm text-slate-400 mb-3">Check your webhook info:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
+<span class="text-blue-400">curl</span> "https://api.telegram.org/bot<span class="text-orange-400">&lt;BOT_TOKEN&gt;</span>/getWebhookInfo"
+                    </div>
+                    <p class="text-xs text-green-400 mt-2">✅ You should see <code class="bg-slate-800 px-1 rounded">"ok":true</code> and your webhook URL listed.</p>
+                </div>
+
+                <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                    <p class="text-sm text-yellow-300"><strong>⚠️ Important:</strong> Your public URL must be HTTPS (Telegram requires it). If using a tunnel service, it provides HTTPS automatically.</p>
+                </div>
+
+                <div class="text-center pt-4">
+                    <button onclick="closeWebhookGuide()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                        Got It!
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        const API = '/api';
+        lucide.createIcons();
+        let authState = 'loading';
+        let currentAgentId = null;
+        let currentContainerId = null;
+        let term = null;
+        let fitAddon = null;
+        let ws = null;
 
-        async function fetchJson(url) {
-            const res = await fetch(url);
-            return res.json();
+        function openWebhookGuide() {
+            document.getElementById('webhook-guide-modal').classList.remove('hidden');
+            lucide.createIcons();
         }
 
-        async function postJson(url, data) {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+        function closeWebhookGuide() {
+            document.getElementById('webhook-guide-modal').classList.add('hidden');
+        }
+
+        async function init() {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                
+                if (data.status === 'authenticated') {
+                    showDashboard();
+                } else if (data.status === 'setup_required') {
+                    showAuthScreen('INITIALIZE SYSTEM', 'Create Admin Account');
+                    authState = 'setup_required';
+                } else {
+                    showAuthScreen('SYSTEM LOCKED', 'Authenticate');
+                    authState = 'login_required';
+                }
+            } catch (e) {
+                console.error("Auth check failed", e);
+                showAuthScreen('SYSTEM ERROR', 'Retry');
+            }
+        }
+
+        function showAuthScreen(title, btnText) {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('dashboard-ui').classList.add('hidden');
+            document.getElementById('auth-title').innerText = title;
+            document.getElementById('auth-btn').innerText = btnText;
+        }
+
+        function showDashboard() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('dashboard-ui').classList.remove('hidden');
+            loadStats();
+            loadAgents();
+            loadAuditLogs();
+            setInterval(() => { 
+                loadStats(); 
+                loadAgents(); 
+            }, 10000);
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
+                el.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
             });
-            return res.json();
+            event.target.closest('.nav-item').classList.add('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
+            event.target.closest('.nav-item').classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+
+            document.getElementById('section-agents').classList.add('hidden');
+            document.getElementById('section-audit').classList.add('hidden');
+            document.getElementById('section-settings').classList.add('hidden');
+            document.getElementById('section-' + section).classList.remove('hidden');
+
+            const titles = {
+                'agents': 'Mission Control',
+                'audit': 'Audit Logs',
+                'settings': 'Settings'
+            };
+            document.getElementById('page-title').innerText = titles[section] || 'Mission Control';
+
+            if (section === 'audit') loadAuditLogs();
         }
 
-        async function deleteJson(url) {
-            await fetch(url, { method: 'DELETE' });
+        async function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('auth-error');
+            errorDiv.classList.add('hidden');
+
+            const endpoint = authState === 'setup_required' ? '/api/auth/setup' : '/api/auth/login';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Operation failed');
+
+                if (authState === 'setup_required') {
+                    alert('System Initialized. Please login.');
+                    window.location.reload();
+                } else {
+                    showDashboard();
+                }
+            } catch (err) {
+                errorDiv.innerText = `ERROR: ${err.message}`;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.reload();
         }
 
         async function loadStats() {
-            const stats = await fetchJson(`${API}/stats`);
-            document.getElementById('stat-agents').textContent = stats.agentsCount;
-            document.getElementById('stat-containers').textContent = stats.activeContainers;
-            document.getElementById('stat-users').textContent = stats.allowlistCount;
-            document.getElementById('stat-spend').textContent = '$' + stats.totalSpendToday.toFixed(2);
-            document.getElementById('status').textContent = stats.docker ? '🟢 Docker Online' : '🔴 Docker Offline';
+            try {
+                const res = await fetch('/api/stats');
+                if(res.status === 401) return logout();
+                const data = await res.json();
+                document.getElementById('stat-containers').innerText = data.activeContainers;
+                document.getElementById('stat-agents').innerText = data.totalAgents;
+                document.getElementById('stat-spend').innerText = '$' + data.totalSpendToday.toFixed(4);
+            } catch (e) {}
         }
 
         async function loadAgents() {
-            const agents = await fetchJson(`${API}/agents`);
-            const grid = document.getElementById('agents-grid');
-            
-            if (agents.length === 0) {
-                grid.innerHTML = '<div class="empty-state">No agents yet. Create your first AI worker!</div>';
-                return;
-            }
+            try {
+                const res = await fetch('/api/agents');
+                if(res.status === 401) return logout();
+                const agents = await res.json();
+                const grid = document.getElementById('agent-grid');
+                grid.innerHTML = '';
 
-            grid.innerHTML = agents.map(agent => {
-                const budgetPercent = (agent.budget.current_spend_usd / agent.budget.daily_limit_usd) * 100;
-                const budgetClass = budgetPercent > 90 ? 'danger' : budgetPercent > 70 ? 'warning' : '';
-                
-                return `
-                    <div class="agent-card">
-                        <div class="agent-header">
-                            <div>
-                                <div class="agent-name">${agent.name}</div>
-                                <div class="agent-role">${agent.role}</div>
+                agents.forEach(agent => {
+                    const percent = (agent.budget.current_spend_usd / agent.budget.daily_limit_usd) * 100;
+                    const color = percent > 90 ? 'bg-red-500' : 'bg-green-500';
+                    const hitlBadge = agent.require_approval ? '<span class="ml-2 text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">HITL</span>' : '';
+
+                    const card = `
+                        <div class="glass-card rounded-2xl p-6 relative group overflow-hidden">
+                            <div class="absolute top-0 right-0 p-6 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <div class="w-2 h-2 rounded-full ${agent.is_active ? 'bg-green-400 shadow-[0_0_10px_#4ade80]' : 'bg-red-400'}"></div>
                             </div>
-                            <span class="agent-status">
-                                <span class="status-dot ${agent.is_active ? 'status-active' : 'status-inactive'}"></span>
-                                ${agent.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        <div class="agent-info">
-                            <strong>Image:</strong> ${agent.docker_image}<br>
-                            <strong>Token:</strong> <code>${agent.telegram_token.slice(0, 8)}...</code>
-                        </div>
-                        <div class="agent-info">
-                            <strong>Budget:</strong> $${agent.budget.current_spend_usd.toFixed(2)} / $${agent.budget.daily_limit_usd}
-                            <div class="budget-bar">
-                                <div class="budget-fill ${budgetClass}" style="width: ${Math.min(budgetPercent, 100)}%"></div>
+                            
+                            <div class="mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-3">
+                                    <span class="text-2xl">🦀</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-white">${agent.name} ${hitlBadge}</h3>
+                                <p class="text-xs text-orange-400 font-mono mt-1">${agent.role}</p>
+                            </div>
+
+                            <div class="space-y-3 mb-6">
+                                <div class="flex justify-between text-xs text-slate-400 font-mono">
+                                    <span>IMAGE</span>
+                                    <span>${agent.docker_image.split(':')[0]}</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-slate-400 font-mono">
+                                    <span>BUDGET</span>
+                                    <span>$${agent.budget.current_spend_usd.toFixed(4)} / $${agent.budget.daily_limit_usd}</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div class="${color} h-full" style="width: ${percent}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
+                                    <i data-lucide="terminal" class="w-4 h-4"></i> Terminal
+                                </button>
+                                <button onclick="editAgent(${agent.id})" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
+                                    <i data-lucide="settings" class="w-4 h-4"></i> Config
+                                </button>
                             </div>
                         </div>
-                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                            <button class="btn" onclick="testAgent(${agent.id})">Test</button>
-                            <button class="btn" onclick="editAgent(${agent.id})">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                    grid.innerHTML += card;
+                });
+                lucide.createIcons();
+            } catch(e) {}
         }
 
-        async function loadAllowlist() {
-            const users = await fetchJson(`${API}/allowlist`);
-            const tbody = document.getElementById('allowlist-table');
-            
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">No users in allowlist</td></tr>';
-                return;
+        async function loadAuditLogs() {
+            try {
+                const res = await fetch('/api/audit?limit=50');
+                if(res.status === 401) return logout();
+                const logs = await res.json();
+                const agents = await fetch('/api/agents').then(r => r.json());
+                const agentMap = {};
+                agents.forEach(a => agentMap[a.id] = a.name);
+
+                const tbody = document.getElementById('audit-tbody');
+                tbody.innerHTML = '';
+
+                logs.forEach(log => {
+                    const statusColor = log.status === 'approved' ? 'text-green-400' : log.status === 'denied' ? 'text-red-400' : 'text-yellow-400';
+                    const row = `
+                        <tr class="hover:bg-white/5">
+                            <td class="px-4 py-3 font-mono text-slate-400">${new Date(log.created_at).toLocaleString()}</td>
+                            <td class="px-4 py-3">${agentMap[log.agent_id] || 'Unknown'}</td>
+                            <td class="px-4 py-3 font-mono text-xs truncate max-w-xs" title="${log.command}">${log.command}</td>
+                            <td class="px-4 py-3 ${statusColor} font-mono">${log.status.toUpperCase()}</td>
+                            <td class="px-4 py-3">
+                                <button onclick="viewContainer('${log.container_id}')" class="text-orange-500 hover:text-white text-xs">View Terminal</button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch(e) {
+                console.error('Failed to load audit logs:', e);
             }
-
-            tbody.innerHTML = users.map(user => `
-                <tr>
-                    <td><code>${user.user_id}</code></td>
-                    <td>@${user.username || '-'}</td>
-                    <td>${user.first_name || '-'}</td>
-                    <td>${new Date(user.added_at).toLocaleDateString()}</td>
-                    <td><button class="btn btn-danger" onclick="removeUser(${user.user_id})">Remove</button></td>
-                </tr>
-            `).join('');
         }
 
-        async function loadSettings() {
-            const settings = await fetchJson(`${API}/settings`);
-            document.getElementById('setting-provider').value = settings.default_provider;
-            document.getElementById('setting-model').value = settings.default_model;
-            
-            const status = [];
-            if (settings.openai_key_set) status.push('✅ OpenAI Key Set');
-            if (settings.openrouter_key_set) status.push('✅ OpenRouter Key Set');
-            if (!settings.openai_key_set && !settings.openrouter_key_set) status.push('❌ No API Keys Set');
-            document.getElementById('api-status').innerHTML = status.join('<br>');
-        }
+        async function createAgent() {
+            const name = document.getElementById('new-name').value;
+            const role = document.getElementById('new-role').value;
+            const token = document.getElementById('new-token').value;
+            const image = document.getElementById('new-image').value;
+            const requireApproval = document.getElementById('new-require-approval').checked ? 1 : 0;
 
-        async function showCreateAgent() {
-            const images = await fetchJson(`${API}/images`);
-            document.getElementById('modal-title').textContent = 'Create New Agent';
-            document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="createAgent(event)">
-                    <div class="form-group">
-                        <label>Agent Name</label>
-                        <input type="text" name="name" required placeholder="e.g., Sherlock">
-                    </div>
-                    <div class="form-group">
-                        <label>Role</label>
-                        <input type="text" name="role" placeholder="e.g., Security Researcher">
-                    </div>
-                    <div class="form-group">
-                        <label>Telegram Bot Token</label>
-                        <input type="text" name="telegram_token" required placeholder="Your bot token from @BotFather">
-                    </div>
-                    <div class="form-group">
-                        <label>Docker Image</label>
-                        <select name="docker_image">
-                            ${images.map(img => `<option value="${img}">${img}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>System Prompt</label>
-                        <textarea name="system_prompt" placeholder="You are a helpful AI assistant..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%">Create Agent</button>
-                </form>
-            `;
-            document.getElementById('modal').classList.remove('hidden');
-        }
+            if(!name || !token) return alert('Name and Token required');
 
-        async function createAgent(e) {
-            e.preventDefault();
-            const form = e.target;
-            const data = {
-                name: form.name.value,
-                role: form.role.value,
-                telegram_token: form.telegram_token.value,
-                docker_image: form.docker_image.value,
-                system_prompt: form.system_prompt.value
-            };
-            await postJson(`${API}/agents`, data);
+            await fetch('/api/agents', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, role, telegram_token: token, docker_image: image, require_approval: requireApproval })
+            });
+
             closeModal();
             loadAgents();
-            loadStats();
         }
 
-        async function testAgent(id) {
-            const output = prompt('Enter test message (or leave empty for default):');
-            const result = await postJson(`${API}/test-agent/${id}`, { message: output || 'Say hello and tell me about your environment.' });
-            
-            if (result.error) {
-                alert('Error: ' + result.error);
-            } else {
-                alert('Agent Response:\n\n' + result.output);
-            }
-            loadAgents();
-            loadStats();
+        async function editAgent(id) {
+            const agents = await fetch('/api/agents').then(r => r.json());
+            const agent = agents.find(a => a.id === id);
+            if (!agent) return;
+
+            document.getElementById('new-name').value = agent.name;
+            document.getElementById('new-role').value = agent.role;
+            document.getElementById('new-token').value = agent.telegram_token;
+            document.getElementById('new-image').value = agent.docker_image;
+            document.getElementById('new-require-approval').checked = agent.require_approval === 1;
+
+            document.getElementById('create-modal').classList.remove('hidden');
         }
 
-        async function deleteAgent(id) {
-            if (!confirm('Are you sure you want to delete this agent?')) return;
-            await deleteJson(`${API}/agents/${id}`);
-            loadAgents();
-            loadStats();
-        }
-
-        async function showAddUser() {
-            document.getElementById('modal-title').textContent = 'Add User to Allowlist';
-            document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="addUser(event)">
-                    <div class="form-group">
-                        <label>Telegram User ID</label>
-                        <input type="number" name="user_id" required placeholder="Get from @userinfobot">
-                    </div>
-                    <div class="form-group">
-                        <label>Username (optional)</label>
-                        <input type="text" name="username" placeholder="@username">
-                    </div>
-                    <div class="form-group">
-                        <label>First Name (optional)</label>
-                        <input type="text" name="first_name" placeholder="John">
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%">Add User</button>
-                </form>
-            `;
-            document.getElementById('modal').classList.remove('hidden');
-        }
-
-        async function addUser(e) {
-            e.preventDefault();
-            const form = e.target;
-            await postJson(`${API}/allowlist`, {
-                user_id: Number(form.user_id.value),
-                username: form.username.value,
-                first_name: form.first_name.value
-            });
-            closeModal();
-            loadAllowlist();
-            loadStats();
-        }
-
-        async function removeUser(userId) {
-            if (!confirm('Remove this user from allowlist?')) return;
-            await deleteJson(`${API}/allowlist/${userId}`);
-            loadAllowlist();
-            loadStats();
-        }
-
-        async function saveSettings() {
-            await postJson(`${API}/settings`, {
-                key: 'default_provider',
-                value: document.getElementById('setting-provider').value
-            });
-            await postJson(`${API}/settings`, {
-                key: 'default_model',
-                value: document.getElementById('setting-model').value
-            });
-            alert('Settings saved!');
+        function openModal() {
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-role').value = '';
+            document.getElementById('new-token').value = '';
+            document.getElementById('new-require-approval').checked = false;
+            document.getElementById('create-modal').classList.remove('hidden');
         }
 
         function closeModal() {
-            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('create-modal').classList.add('hidden');
         }
 
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById('section-' + tab.dataset.tab).classList.add('active');
+        async function openTerminal(id, name) {
+            currentAgentId = id;
+            document.getElementById('term-title').innerText = `ssh ${name.toLowerCase()}@hermitclaw`;
+            document.getElementById('terminal-modal').classList.remove('hidden');
+
+            if (!term) {
+                term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    theme: {
+                        background: '#0c0a09',
+                        foreground: '#f8fafc',
+                        cursor: '#ff6b35'
+                    }
+                });
+                fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+                term.open(document.getElementById('xterm-container'));
+                fitAddon.fit();
+
+                term.writeln('\x1b[38;5;208mHERMITCLAW v1.0.0 - Secure Shell Connection Established.\x1b[0m');
+                term.writeln('\x1b[90mClick "Link" button to attach to a running container\x1b[0m');
+            }
+        }
+
+        async function attachTerminal() {
+            const containers = await fetch('/api/containers').then(r => r.json());
+            if (!containers || containers.length === 0) {
+                term.writeln('\x1b[31mNo running containers found\x1b[0m');
+                return;
+            }
+
+            const runningContainer = containers[0];
+            currentContainerId = runningContainer.Id;
+
+            term.writeln(`\x1b[32mConnecting to ${runningContainer.Names[0]}...\x1b[0m`);
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${currentContainerId}`);
+
+            ws.onopen = () => {
+                term.writeln('\x1b[32mConnected!\x1b[0m');
+            };
+
+            ws.onmessage = (event) => {
+                const data = atob(event.data);
+                term.write(data);
+            };
+
+            ws.onclose = () => {
+                term.writeln('\x1b[33mDisconnected\x1b[0m');
+            };
+
+            ws.onerror = (err) => {
+                term.writeln('\x1b[31mConnection error\x1b[0m');
+                console.error(err);
+            };
+
+            term.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(btoa(data));
+                }
             });
+        }
+
+        async function viewContainer(containerId) {
+            if (!term) {
+                term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    theme: {
+                        background: '#0c0a09',
+                        foreground: '#f8fafc',
+                        cursor: '#ff6b35'
+                    }
+                });
+                fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+                term.open(document.getElementById('xterm-container'));
+                fitAddon.fit();
+            }
+
+            document.getElementById('terminal-modal').classList.remove('hidden');
+            term.writeln(`\x1b[32mAttaching to container ${containerId.substring(0, 12)}...\x1b[0m`);
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${containerId}`);
+
+            ws.onopen = () => {
+                term.writeln('\x1b[32mConnected!\x1b[0m');
+            };
+
+            ws.onmessage = (event) => {
+                const data = atob(event.data);
+                term.write(data);
+            };
+
+            ws.onclose = () => {
+                term.writeln('\x1b[33mDisconnected\x1b[0m');
+            };
+
+            term.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(btoa(data));
+                }
+            });
+        }
+
+        function closeTerminal() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            document.getElementById('terminal-modal').classList.add('hidden');
+        }
+
+        window.addEventListener('resize', () => {
+            if (fitAddon) fitAddon.fit();
         });
 
-        loadStats();
-        loadAgents();
-        loadAllowlist();
-        loadSettings();
-
-        setInterval(() => {
-            loadStats();
-        }, 30000);
+        init();
     </script>
 </body>
 </html>

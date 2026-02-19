@@ -3,9 +3,9 @@ import {
     getAllAgents, isAllowed, initDb, getAdminCount, createAdmin, getAdmin,
     getAllSettings, setSetting, getBudget, getAllowlist, addToAllowlist, removeFromAllowlist,
     getTotalSpend, getAllBudgets, updateAgent, deleteAgent, updateBudget, createAgent,
-    getAuditLogs
+    getAuditLogs, getAgentById
 } from './db';
-import { checkDocker, listContainers, getContainerExec, docker } from './docker';
+import { checkDocker, listContainers, getContainerExec, docker, spawnAgent } from './docker';
 import { hashPassword, verifyPassword, generateSessionToken } from './auth';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -243,19 +243,30 @@ export async function startServer() {
         return { success: true };
     });
 
-    fastify.post('/api/test-agent/:id', async (request: any) => {
+    fastify.post('/api/test-agent/:id', async (request: any, reply: any) => {
         const agentId = Number(request.params.id);
         const { message } = request.body;
         
-        const agent = await getAllAgents().then(agents => agents.find(a => a.id === agentId));
+        const agent = await getAgentById(agentId);
         if (!agent) {
-            return { error: 'Agent not found' };
+            return reply.code(404).send({ error: 'Agent not found' });
         }
-        
-        return { 
-            output: `[Simulated] Agent ${agent.name} would execute: ${message}\n\nContainer execution not yet implemented.`,
-            agent_id: agentId
-        };
+
+        try {
+            const result = await spawnAgent({
+                agentId: agent.id,
+                agentName: agent.name,
+                agentRole: agent.role,
+                dockerImage: agent.docker_image,
+                userMessage: message || 'Say hello and tell me about your environment.',
+                history: [],
+                maxTokens: 1000,
+                requireApproval: false
+            });
+            return { output: result.output, containerId: result.containerId };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
     });
 
     fastify.get('/webhook/:token', async (_request: any, _reply: any) => {

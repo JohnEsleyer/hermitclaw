@@ -120,8 +120,29 @@ export async function initDb(): Promise<void> {
             FOREIGN KEY (agent_id) REFERENCES agents(id)
         );
 
+        CREATE TABLE IF NOT EXISTS agent_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INTEGER,
+            content TEXT,
+            embedding TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agent_id) REFERENCES agents(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS meetings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            initiator_id INTEGER,
+            participant_id INTEGER,
+            topic TEXT,
+            transcript TEXT,
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (initiator_id) REFERENCES agents(id),
+            FOREIGN KEY (participant_id) REFERENCES agents(id)
+        );
+
         INSERT OR IGNORE INTO settings (key, value) VALUES ('default_provider', 'openrouter');
-        INSERT OR IGNORE INTO settings (key, value) VALUES ('default_model', 'anthropic/claude-3-haiku');
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('default_model', 'auto');
         INSERT OR IGNORE INTO settings (key, value) VALUES ('public_url', '');
         INSERT OR IGNORE INTO settings (key, value) VALUES ('default_daily_limit', '1.00');
         INSERT OR IGNORE INTO settings (key, value) VALUES ('hitl_enabled', 'false');
@@ -433,4 +454,93 @@ export function extractId(record: any): number {
         return parseInt(parts[parts.length - 1], 10) || 0;
     }
     return 0;
+}
+
+export interface AgentMemory {
+    id: number;
+    agent_id: number;
+    content: string;
+    embedding: string;
+    created_at: string;
+}
+
+export interface Meeting {
+    id: number;
+    initiator_id: number;
+    participant_id: number;
+    topic: string;
+    transcript: string;
+    status: string;
+    created_at: string;
+}
+
+export async function storeMemory(agentId: number, content: string, embedding: number[]): Promise<number> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: 'INSERT INTO agent_memory (agent_id, content, embedding) VALUES (?, ?, ?)',
+        args: [agentId, content, JSON.stringify(embedding)]
+    });
+    return Number(rs.lastInsertRowid);
+}
+
+export async function searchMemory(agentId: number, queryEmbedding: number[], limit: number = 5): Promise<AgentMemory[]> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: `SELECT id, agent_id, content, embedding, created_at FROM agent_memory 
+              WHERE agent_id = ? 
+              ORDER BY id DESC 
+              LIMIT ?`,
+        args: [agentId, limit]
+    });
+    return rs.rows as unknown as AgentMemory[];
+}
+
+export async function getAgentMemories(agentId: number, limit: number = 20): Promise<AgentMemory[]> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: 'SELECT id, agent_id, content, embedding, created_at FROM agent_memory WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?',
+        args: [agentId, limit]
+    });
+    return rs.rows as unknown as AgentMemory[];
+}
+
+export async function createMeeting(initiatorId: number, participantId: number, topic: string): Promise<number> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: 'INSERT INTO meetings (initiator_id, participant_id, topic, status) VALUES (?, ?, ?, ?)',
+        args: [initiatorId, participantId, topic, 'active']
+    });
+    return Number(rs.lastInsertRowid);
+}
+
+export async function updateMeetingTranscript(meetingId: number, transcript: string): Promise<void> {
+    const db = await getClient();
+    await db.execute({
+        sql: 'UPDATE meetings SET transcript = ? WHERE id = ?',
+        args: [transcript, meetingId]
+    });
+}
+
+export async function closeMeeting(meetingId: number): Promise<void> {
+    const db = await getClient();
+    await db.execute({
+        sql: 'UPDATE meetings SET status = ? WHERE id = ?',
+        args: ['closed', meetingId]
+    });
+}
+
+export async function getActiveMeetings(agentId?: number): Promise<Meeting[]> {
+    const db = await getClient();
+    if (agentId) {
+        const rs = await db.execute({
+            sql: 'SELECT * FROM meetings WHERE (initiator_id = ? OR participant_id = ?) AND status = ? ORDER BY created_at DESC',
+            args: [agentId, agentId, 'active']
+        });
+        return rs.rows as unknown as Meeting[];
+    }
+    const rs = await db.execute({
+        sql: 'SELECT * FROM meetings WHERE status = ? ORDER BY created_at DESC',
+        args: ['active']
+    });
+    return rs.rows as unknown as Meeting[];
 }

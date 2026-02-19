@@ -17,6 +17,9 @@ HermitClaw is an evolution from a single Telegram bot to a **Secure Agentic Oper
 - **Cubicle Security**: Each agent is isolated in its own container - complete freedom inside, steel walls outside
 - **Ephemeral Execution**: Agents only exist during task execution, then vanish
 - **Tool-Ready**: Agents can execute commands (curl, python, nmap, etc.) and see real results
+- **Vector Memory**: libSQL-powered semantic memory storage for agents
+- **Agent Meetings**: Agents can delegate sub-tasks to other specialized agents
+- **Real-time Testing**: Test agents directly from the dashboard with live container execution
 
 ## Architecture
 
@@ -26,13 +29,14 @@ HermitClaw is an evolution from a single Telegram bot to a **Secure Agentic Oper
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │              Web Dashboard (Port 3000)              │   │
 │  │  - Agent Management  - Budget Tracking  - Settings   │   │
-│  │  - Audit Logs       - Web Terminal                  │   │
+│  │  - Audit Logs       - Web Terminal    - Test Agent   │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                           │                                 │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │              Node.js Shell (Orchestrator)             │   │
-│  │  - SQLite DB  - Docker Management  - Webhooks        │   │
-│  │  - HITL Controller  - Audit Logger                   │   │
+│  │  - libSQL DB  - Docker Management  - Webhooks        │   │
+│  │  - HITL Controller  - Audit Logger  - Vector Memory  │   │
+│  │  - Meeting Orchestration                              │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -40,11 +44,15 @@ HermitClaw is an evolution from a single Telegram bot to a **Secure Agentic Oper
         ▼                   ▼                   ▼
 ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
 │  Agent A      │   │  Agent B      │   │  Agent C      │
-│  "Sherlock"   │   │  "DevOps"    │   │  "Researcher" │
+│  "Sherlock"   │   │  "DevOps"     │   │  "Researcher" │
 │  hermit/base  │   │ hermit/python │   │ hermit/netsec │
-│  Container     │   │  Container    │   │  Container    │
 │  [HITL: ON]   │   │  Container    │   │  Container    │
+│  [Memory: ✓]  │   │  [Memory: ✓]  │   │  [Memory: ✓]  │
 └───────────────┘   └───────────────┘   └───────────────┘
+        │                   │                   │
+        └───────────────────┴───────────────────┘
+                            │
+                    Agent Meetings (DELEGATE)
 ```
 
 ## Directory Structure
@@ -52,23 +60,23 @@ HermitClaw is an evolution from a single Telegram bot to a **Secure Agentic Oper
 ```
 hermitclaw/
 ├── docker-compose.yml    # Docker Compose setup (optional)
-├── shell/               # Node.js orchestrator
+├── shell/                # Node.js orchestrator
 │   ├── src/
-│   │   ├── server.ts    # Fastify server + webhook handler
-│   │   ├── db.ts        # SQLite database (libSQL)
-│   │   ├── docker.ts    # Docker container orchestration
+│   │   ├── server.ts     # Fastify server + webhook handler
+│   │   ├── db.ts         # libSQL database + vector memory + meetings
+│   │   ├── docker.ts     # Docker container orchestration
 │   │   ├── telegram.ts   # Telegram bot handler + HITL
-│   │   └── auth.ts      # User validation
-│   ├── dashboard/        # Web GUI
+│   │   └── auth.ts       # User validation
+│   ├── dashboard/        # Web GUI (served at /dashboard)
 │   └── package.json
-├── crab/                # Rust AI agent
+├── crab/                 # Rust AI agent
 │   ├── src/
-│   │   ├── main.rs      # Entry point + agent loop
-│   │   ├── llm.rs       # OpenAI/OpenRouter client
-│   │   └── tools.rs     # Command execution + dangerous cmd detection
+│   │   ├── main.rs       # Entry point + agent loop + memory injection
+│   │   ├── llm.rs        # OpenAI/OpenRouter client
+│   │   └── tools.rs      # Command execution + HITL + delegation
 │   └── Dockerfile
-├── data/db/             # SQLite database (created at runtime)
-└── config/              # Configuration files
+├── data/db/              # libSQL database (created at runtime)
+└── config/               # Configuration files
 ```
 
 ## Quick Start
@@ -148,6 +156,7 @@ When enabled, dangerous commands require approval via Telegram:
 - Network: curl, wget, nmap, nc, netcat
 - System: sudo, su, kill, shutdown
 - Docker: docker, podman
+- Agent spawning: spawn_agent
 
 ### Web Terminal
 
@@ -168,6 +177,41 @@ All agent commands are logged with:
 - Output snippet
 
 View logs in Dashboard → Audit Logs section
+
+### Vector Memory
+
+Agents can store and retrieve memories using libSQL:
+
+- **Automatic Storage**: Agent interactions are stored with embeddings
+- **Semantic Search**: Retrieve relevant past experiences
+- **Per-Agent Isolation**: Each agent has its own memory space
+- **Context Injection**: Memories are injected before LLM calls
+
+Memory is managed via the `agent_memory` table and the `searchMemory()` function.
+
+### Agent Meetings (Collaboration)
+
+Agents can delegate sub-tasks to other specialized agents:
+
+```
+Agent: I need to analyze this data.
+ACTION: DELEGATE
+AGENT_ROLE: Python Expert
+TASK: Analyze the CSV file at /data/sales.csv and return a summary
+```
+
+The orchestrator logs delegation requests and can route them to appropriate agents. Meeting transcripts are stored in the `meetings` table.
+
+### Real-time Agent Testing
+
+Test agents directly from the dashboard:
+
+1. Click "Test" on any agent card
+2. Enter a test message
+3. Agent spawns in a real Docker container
+4. View the live response
+
+No HITL approval required for dashboard tests - safe for quick experimentation.
 
 ## Dashboard Features
 
@@ -211,6 +255,7 @@ View logs in Dashboard → Audit Logs section
 | `/api/agents` | POST | Create new agent |
 | `/api/agents/:id` | PUT | Update agent |
 | `/api/agents/:id` | DELETE | Delete agent |
+| `/api/test-agent/:id` | POST | Test agent with message (spawns container) |
 | `/api/stats` | GET | System statistics |
 | `/api/settings` | GET | Get all settings |
 | `/api/settings` | POST | Update a setting |
@@ -228,9 +273,10 @@ View logs in Dashboard → Audit Logs section
 - **budgets**: agent_id, daily_limit_usd, current_spend_usd, last_reset_date
 - **allowlist**: user_id, username, first_name, added_at
 - **settings**: key, value (includes public_url, default_model, default_provider, default_daily_limit, hitl_enabled)
-- **meetings**: id, initiator_agent_id, participant_agent_id, topic, transcript, created_at
 - **admins**: id, username, password_hash, salt, created_at
 - **audit_logs**: id, agent_id, container_id, command, output_snippet, approved_by, approved_at, status, created_at
+- **agent_memory**: id, agent_id, content, embedding, created_at (vector memory storage)
+- **meetings**: id, initiator_id, participant_id, topic, transcript, status, created_at (agent collaboration)
 
 ## Agent Tool Loop
 
@@ -248,6 +294,22 @@ COMMAND: curl -s -o /dev/null -w "%{http_code}" https://example.com
 Agent: example.com is responding with HTTP 200 OK.
 ```
 
+### Agent Collaboration Protocol
+
+Agents can delegate tasks to other specialized agents:
+
+```
+Agent: I need Python expertise for this task.
+ACTION: DELEGATE
+AGENT_ROLE: Python Expert
+TASK: Analyze the CSV file and create a visualization
+
+[System logs delegation request]
+[MEETING] Sub-task delegation requested...
+[MEETING] TARGET_ROLE: Python Expert
+[MEETING] TASK: Analyze the CSV file...
+```
+
 ## Security
 
 - **Admin Authentication**: Dashboard is protected with session-based auth
@@ -258,17 +320,8 @@ Agent: example.com is responding with HTTP 200 OK.
 - **Network Isolation**: Agents can access internet but not host system
 - **Budget Guards**: Per-agent spending limits prevent runaway costs
 - **Audit Trail**: Complete logging of all executed commands
-
-## Future Features
-
-### Agent Meetings (Planned)
-Agents can collaborate by calling each other:
-- Manager agent spawns Researcher agent
-- Researcher completes sub-task and returns result
-- Manager incorporates result and completes main task
-
-### Vector Memory (Planned)
-SurrealDB integration for semantic search of past agent experiences.
+- **Memory Isolation**: Each agent's vector memory is isolated by agent_id
+- **Delegation Control**: Agent spawning triggers HITL approval
 
 ## Troubleshooting
 
@@ -281,14 +334,23 @@ newgrp docker
 ### Build errors
 ```bash
 # Install build dependencies
-sudo apt install build-essential python3
+sudo apt install build-essential python3 pkg-config libssl-dev
 ```
 
 ### Database issues
-The SQLite database is stored in `data/db/hermit.db`. Delete it to reset:
+The libSQL database is stored in `data/db/hermit.db`. Delete it to reset:
 ```bash
 rm -rf data/db/hermit.db
 ```
+
+## Technology Stack
+
+- **Orchestrator**: Node.js + Fastify + TypeScript
+- **Database**: libSQL (SQLite-compatible with extensions)
+- **Agent Runtime**: Rust + Tokio + Reqwest
+- **Container Runtime**: Docker
+- **Frontend**: Vanilla JS + Tailwind CSS + xterm.js
+- **LLM Providers**: OpenRouter / OpenAI
 
 ## License
 

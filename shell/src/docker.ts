@@ -48,12 +48,14 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
     }
 
     const envVars = [
+        `AGENT_ID=${config.agentId}`,
         `USER_MSG=${config.userMessage}`,
         `MAX_TOKENS=${config.maxTokens}`,
         `AGENT_NAME=${config.agentName}`,
         `AGENT_ROLE=${config.agentRole}`,
         `DOCKER_IMAGE=${config.dockerImage}`,
         `HISTORY_FILE=/app/history.json`,
+        `MODEL=${process.env.MODEL || 'auto'}`,
     ];
 
     if (config.requireApproval) {

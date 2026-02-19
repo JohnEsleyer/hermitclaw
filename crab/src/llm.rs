@@ -62,7 +62,7 @@ impl LLMClient {
             if provider == "openai" {
                 "gpt-4o".to_string()
             } else {
-                "anthropic/claude-3-haiku".to_string()
+                "auto".to_string()
             }
         });
 

@@ -34,6 +34,17 @@
             50% { transform: translateY(-10px) rotate(2deg); }
         }
 
+        .claw-pinch {
+            transform-origin: center;
+            transition: transform 0.2s ease;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #ff6b35 0%, #f97316 50%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
         .glass-card {
             background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(12px);
@@ -97,19 +108,34 @@
     <div class="scanline"></div>
 
     <!-- Auth Screen -->
-    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4">
+    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4 overflow-hidden">
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
         <div class="glass-card p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
-            <div class="absolute -top-10 -right-10 opacity-10">
-                <svg viewBox="0 0 100 100" class="w-40 h-40 fill-orange-500">
-                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
-                </svg>
-            </div>
-
             <div class="mb-8 text-center">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-500/20 flex items-center justify-center">
-                    <svg viewBox="0 0 100 100" class="w-10 h-10 fill-orange-500">
-                        <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
-                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                <div class="relative w-24 h-24 mx-auto mb-4">
+                    <svg id="auth-mascot" viewBox="0 0 200 200" class="w-full h-full crab-float">
+                        <path d="M100 40C60 40 30 70 30 110C30 130 45 150 70 155C80 158 120 158 130 155C155 150 170 130 170 110C170 70 140 40 100 40Z" fill="#334155" />
+                        <path d="M100 55C80 55 60 65 55 85C50 105 60 125 80 135" stroke="#475569" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        <g id="crab-body-auth">
+                            <path d="M50 130L30 150" stroke="#ff6b35" stroke-width="8" stroke-linecap="round" />
+                            <path d="M150 130L170 150" stroke="#ff6b35" stroke-width="8" stroke-linecap="round" />
+                            <path d="M60 145L45 165" stroke="#ff6b35" stroke-width="8" stroke-linecap="round" />
+                            <path d="M140 145L155 165" stroke="#ff6b35" stroke-width="8" stroke-linecap="round" />
+                            <rect x="70" y="115" width="60" height="40" rx="20" fill="#ff6b35" />
+                            <circle cx="85" cy="115" r="12" fill="#ff6b35" />
+                            <circle cx="115" cy="115" r="12" fill="#ff6b35" />
+                            <circle cx="85" cy="115" r="5" fill="black" />
+                            <circle cx="115" cy="115" r="5" fill="black" />
+                            <g id="left-claw-auth" class="claw-pinch">
+                                <path d="M60 115Q40 115 35 100" stroke="#ff6b35" stroke-width="12" stroke-linecap="round" fill="none"/>
+                                <path d="M35 105Q25 90 40 85" stroke="#ff6b35" stroke-width="10" stroke-linecap="round" fill="none"/>
+                            </g>
+                            <g id="right-claw-auth" class="claw-pinch">
+                                <path d="M140 115Q160 115 165 100" stroke="#ff6b35" stroke-width="12" stroke-linecap="round" fill="none"/>
+                                <path d="M165 105Q175 90 160 85" stroke="#ff6b35" stroke-width="10" stroke-linecap="round" fill="none"/>
+                            </g>
+                        </g>
                     </svg>
                 </div>
                 <h1 class="text-3xl font-bold tracking-tight text-white mb-2">HermitClaw</h1>
@@ -140,7 +166,8 @@
         <aside class="w-64 glass-panel flex flex-col z-20 h-full fixed md:relative hidden md:flex">
             <div class="p-6 flex items-center space-x-3 border-b border-white/5">
                 <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
-                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
+                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z"/>
+                    <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
                 </svg>
                 <h1 class="font-bold tracking-tight text-lg text-white">HermitClaw</h1>
             </div>
@@ -154,13 +181,17 @@
                     <i data-lucide="file-text" class="w-5 h-5"></i>
                     <span>Audit Logs</span>
                 </a>
-                <a href="/api/stats" target="_blank" class="flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('metrics')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
                     <span>Metrics</span>
                 </a>
-                <a href="/api/allowlist" target="_blank" class="flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('allowlist')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="users" class="w-5 h-5"></i>
                     <span>Allowlist</span>
+                </a>
+                <a href="#" onclick="showSection('settings')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span>Settings</span>
                 </a>
             </nav>
 
@@ -255,10 +286,160 @@
                                     <th class="px-4 py-3 text-left font-mono">ACTIONS</th>
                                 </tr>
                             </thead>
-                            <tbody id="audit-tbody" class="divide-y divide-slate-700/50">
+                            <tbody id="audit-tbody" class="divide-y divide-slate-800">
                             </tbody>
                         </table>
+                        <div id="audit-empty" class="p-8 text-center text-slate-500 hidden">
+                            No audit logs yet. Commands requiring approval will appear here.
+                        </div>
                     </div>
+                </div>
+
+                <!-- Metrics Section -->
+                <div id="section-metrics" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-orange-500"></i>
+                        System Metrics
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="server" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">DOCKER</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="metric-containers">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Running Containers</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">AGENTS</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="metric-agents">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Total Agents</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">SPEND</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="metric-spend">$0.00</div>
+                            <div class="text-xs text-slate-400 mt-1">Today's Spend</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                                <span class="text-xs font-mono text-slate-500">ALLOWLIST</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="metric-allowlist">0</div>
+                            <div class="text-xs text-slate-400 mt-1">Allowed Users</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="text-white font-bold mb-4">API Keys Status</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex items-center justify-between bg-slate-800 p-4 rounded-lg">
+                                <span class="text-slate-300">OpenAI API Key</span>
+                                <span id="metric-openai" class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not Set</span>
+                            </div>
+                            <div class="flex items-center justify-between bg-slate-800 p-4 rounded-lg">
+                                <span class="text-slate-300">OpenRouter API Key</span>
+                                <span id="metric-openrouter" class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not Set</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Allowlist Section -->
+                <div id="section-allowlist" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="users" class="w-5 h-5 text-orange-500"></i>
+                            User Allowlist
+                        </h3>
+                        <button onclick="openAllowlistModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            Add User
+                        </button>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-800/50 text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-mono">USER ID</th>
+                                    <th class="px-4 py-3 text-left font-mono">USERNAME</th>
+                                    <th class="px-4 py-3 text-left font-mono">FIRST NAME</th>
+                                    <th class="px-4 py-3 text-left font-mono">ADDED</th>
+                                    <th class="px-4 py-3 text-left font-mono">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allowlist-tbody" class="divide-y divide-slate-800">
+                            </tbody>
+                        </table>
+                        <div id="allowlist-empty" class="p-8 text-center text-slate-500 hidden">
+                            No users in allowlist yet. Add users to control who can access your agents.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div id="section-settings" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="settings" class="w-5 h-5 text-orange-500"></i>
+                        Settings
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="webhook" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Telegram Webhooks</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Connect your Telegram bots to receive messages and control your agents.</p>
+                            <button onclick="openWebhookGuide()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm">
+                                <i data-lucide="book-open" class="w-4 h-4 inline mr-2"></i>
+                                Setup Guide
+                            </button>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="key" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">API Keys</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Configure your LLM provider API keys (OpenRouter, OpenAI).</p>
+                            <div class="text-xs font-mono text-slate-500 bg-slate-800 p-3 rounded">
+                                shell/.env
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="model" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Default Model</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Current: <span class="text-orange-400 font-mono">auto</span> (OpenRouter auto-selects best free model)</p>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="database" class="w-5 h-5"></i></div>
+                                <h4 class="text-lg font-bold text-white">Database</h4>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">Using libSQL (native SQLite) for fast, reliable storage.</p>
+                            <div class="text-xs font-mono text-slate-500">data/db/hermit.db</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
                 </div>
             </div>
         </main>
@@ -326,6 +507,105 @@
         </div>
     </div>
 
+    <!-- Webhook Guide Modal -->
+    <div id="webhook-guide-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50 sticky top-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="webhook" class="w-5 h-5 text-blue-500"></i>
+                    Telegram Webhook Setup Guide
+                </h3>
+                <button onclick="closeWebhookGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-6 text-slate-300">
+                <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to send messages to your HermitClaw server instead of your bot polling for updates. It's the standard way to receive messages in production.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">1</span> Get Your Public URL</h4>
+                    <p class="text-sm text-slate-400 mb-3">Your server must be accessible from the internet. If running locally, use a tunnel service:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm text-green-400">
+# Using Cloudflare Tunnel (recommended)<br>
+curl -sL https://run.cloudflare.com/ | sh<br>
+cloudflared tunnel create hermitclaw<br>
+cloudflared tunnel url hermitclaw
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Or use <a href="https://ngrok.com" target="_blank" class="text-orange-400 hover:underline">ngrok</a>: <code class="bg-slate-800 px-1 rounded">ngrok http 3000</code></p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">2</span> Set Your Public URL in Dashboard</h4>
+                    <p class="text-sm text-slate-400 mb-3">Go to Settings and update the <code class="bg-slate-800 px-1 rounded">public_url</code> setting with your public URL (e.g., <code class="bg-slate-800 px-1 rounded">https://your-tunnel-url.cloudflare.net</code>)</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">3</span> Set the Webhook via API</h4>
+                    <p class="text-sm text-slate-400 mb-3">Run this command in your terminal:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
+<span class="text-blue-400">curl</span> -X POST \<br>
+&nbsp;&nbsp;"https://api.telegram.org/bot<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>/setWebhook" \<br>
+&nbsp;&nbsp;-d "url=<span class="text-green-400">&lt;YOUR_PUBLIC_URL&gt;</span>/webhook/<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>"
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Replace <code class="bg-slate-800 px-1 rounded">&lt;YOUR_BOT_TOKEN&gt;</code> with your Telegram bot token and <code class="bg-slate-800 px-1 rounded">&lt;YOUR_PUBLIC_URL&gt;</code> with your public URL.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">4</span> Verify It Works</h4>
+                    <p class="text-sm text-slate-400 mb-3">Check your webhook info:</p>
+                    <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
+<span class="text-blue-400">curl</span> "https://api.telegram.org/bot<span class="text-orange-400">&lt;BOT_TOKEN&gt;</span>/getWebhookInfo"
+                    </div>
+                    <p class="text-xs text-green-400 mt-2">✅ You should see <code class="bg-slate-800 px-1 rounded">"ok":true</code> and your webhook URL listed.</p>
+                </div>
+
+                <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                    <p class="text-sm text-yellow-300"><strong>⚠️ Important:</strong> Your public URL must be HTTPS (Telegram requires it). If using a tunnel service, it provides HTTPS automatically.</p>
+                </div>
+
+                <div class="text-center pt-4">
+                    <button onclick="closeWebhookGuide()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                        Got It!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User to Allowlist Modal -->
+    <div id="allowlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-5 h-5 text-orange-500"></i>
+                    Add User to Allowlist
+                </h3>
+                <button onclick="closeAllowlistModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM USER ID *</label>
+                    <input type="number" id="allowlist-user-id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., 123456789">
+                    <p class="text-xs text-slate-500 mt-1">Ask the user to send /start to @userinfobot on Telegram to get their ID</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">USERNAME (optional)</label>
+                    <input type="text" id="allowlist-username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="@username">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">FIRST NAME (optional)</label>
+                    <input type="text" id="allowlist-first-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="John">
+                </div>
+            </div>
+            <div class="p-6 pt-0 flex justify-end gap-3">
+                <button onclick="closeAllowlistModal()" class="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
+                <button onclick="addAllowlistUser()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                    Add User
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         let authState = 'loading';
@@ -334,6 +614,15 @@
         let term = null;
         let fitAddon = null;
         let ws = null;
+
+        function openWebhookGuide() {
+            document.getElementById('webhook-guide-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeWebhookGuide() {
+            document.getElementById('webhook-guide-modal').classList.add('hidden');
+        }
 
         async function init() {
             try {
@@ -384,11 +673,23 @@
 
             document.getElementById('section-agents').classList.add('hidden');
             document.getElementById('section-audit').classList.add('hidden');
+            document.getElementById('section-settings').classList.add('hidden');
+            document.getElementById('section-metrics').classList.add('hidden');
+            document.getElementById('section-allowlist').classList.add('hidden');
             document.getElementById('section-' + section).classList.remove('hidden');
 
-            document.getElementById('page-title').innerText = section === 'agents' ? 'Mission Control' : 'Audit Logs';
+            const titles = {
+                'agents': 'Mission Control',
+                'audit': 'Audit Logs',
+                'settings': 'Settings',
+                'metrics': 'System Metrics',
+                'allowlist': 'User Allowlist'
+            };
+            document.getElementById('page-title').innerText = titles[section] || 'Mission Control';
 
             if (section === 'audit') loadAuditLogs();
+            if (section === 'metrics') loadMetrics();
+            if (section === 'allowlist') loadAllowlist();
         }
 
         async function handleAuth(e) {
@@ -439,6 +740,114 @@
             } catch (e) {}
         }
 
+        async function loadMetrics() {
+            try {
+                const [statsRes, settingsRes] = await Promise.all([
+                    fetch('/api/stats'),
+                    fetch('/api/settings')
+                ]);
+                const stats = await statsRes.json();
+                const settings = await settingsRes.json();
+
+                document.getElementById('metric-containers').innerText = stats.activeContainers;
+                document.getElementById('metric-agents').innerText = stats.agentsCount;
+                document.getElementById('metric-spend').innerText = '$' + stats.totalSpendToday.toFixed(4);
+                document.getElementById('metric-allowlist').innerText = stats.allowlistCount;
+
+                const openaiStatus = document.getElementById('metric-openai');
+                const openrouterStatus = document.getElementById('metric-openrouter');
+
+                if (settings.openai_key_set) {
+                    openaiStatus.className = 'text-xs font-mono px-2 py-1 rounded bg-green-500/20 text-green-400';
+                    openaiStatus.innerText = 'Set';
+                } else {
+                    openaiStatus.className = 'text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400';
+                    openaiStatus.innerText = 'Not Set';
+                }
+
+                if (settings.openrouter_key_set) {
+                    openrouterStatus.className = 'text-xs font-mono px-2 py-1 rounded bg-green-500/20 text-green-400';
+                    openrouterStatus.innerText = 'Set';
+                } else {
+                    openrouterStatus.className = 'text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400';
+                    openrouterStatus.innerText = 'Not Set';
+                }
+            } catch (e) {}
+        }
+
+        async function loadAllowlist() {
+            try {
+                const res = await fetch('/api/allowlist');
+                if(res.status === 401) return logout();
+                const users = await res.json();
+                const tbody = document.getElementById('allowlist-tbody');
+                const empty = document.getElementById('allowlist-empty');
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                empty.classList.add('hidden');
+                tbody.innerHTML = users.map(user => `
+                    <tr class="hover:bg-white/5">
+                        <td class="px-4 py-3 font-mono text-slate-400">${user.user_id}</td>
+                        <td class="px-4 py-3">${user.username || '-'}</td>
+                        <td class="px-4 py-3">${user.first_name || '-'}</td>
+                        <td class="px-4 py-3 text-slate-400">${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td class="px-4 py-3">
+                            <button onclick="removeFromAllowlist(${user.user_id})" class="text-red-400 hover:text-white text-xs">Remove</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load allowlist:', e);
+            }
+        }
+
+        async function removeFromAllowlist(userId) {
+            if (!confirm('Remove this user from allowlist?')) return;
+            try {
+                await fetch('/api/allowlist/' + userId, { method: 'DELETE' });
+                loadAllowlist();
+            } catch (e) {
+                alert('Failed to remove user');
+            }
+        }
+
+        function openAllowlistModal() {
+            document.getElementById('allowlist-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeAllowlistModal() {
+            document.getElementById('allowlist-modal').classList.add('hidden');
+        }
+
+        async function addAllowlistUser() {
+            const userId = document.getElementById('allowlist-user-id').value;
+            const username = document.getElementById('allowlist-username').value;
+            const firstName = document.getElementById('allowlist-first-name').value;
+
+            if (!userId) return alert('User ID is required');
+
+            try {
+                await fetch('/api/allowlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: Number(userId), username, first_name: firstName })
+                });
+                closeAllowlistModal();
+                document.getElementById('allowlist-user-id').value = '';
+                document.getElementById('allowlist-username').value = '';
+                document.getElementById('allowlist-first-name').value = '';
+                loadAllowlist();
+            } catch (e) {
+                alert('Failed to add user');
+            }
+        }
+
         async function loadAgents() {
             try {
                 const res = await fetch('/api/agents');
@@ -460,7 +869,10 @@
                             
                             <div class="mb-4">
                                 <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-3">
-                                    <span class="text-2xl">🦀</span>
+                                    <svg viewBox="0 0 100 100" class="w-7 h-7 fill-orange-500">
+                                        <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z"/>
+                                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                                    </svg>
                                 </div>
                                 <h3 class="text-xl font-bold text-white">${agent.name} ${hitlBadge}</h3>
                                 <p class="text-xs text-orange-400 font-mono mt-1">${agent.role}</p>
@@ -480,12 +892,15 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
-                                    <i data-lucide="terminal" class="w-4 h-4"></i> Terminal
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="testAgent(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 py-2 rounded-lg text-xs font-medium transition-colors border border-green-600/30">
+                                    <i data-lucide="play" class="w-3 h-3"></i> Test
                                 </button>
-                                <button onclick="editAgent(${agent.id})" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700">
-                                    <i data-lucide="settings" class="w-4 h-4"></i> Config
+                                <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-xs font-medium transition-colors border border-slate-700">
+                                    <i data-lucide="terminal" class="w-3 h-3"></i> Terminal
+                                </button>
+                                <button onclick="editAgent(${agent.id})" class="flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-xs font-medium transition-colors border border-slate-700">
+                                    <i data-lucide="settings" class="w-3 h-3"></i> Config
                                 </button>
                             </div>
                         </div>
@@ -559,6 +974,28 @@
             document.getElementById('new-require-approval').checked = agent.require_approval === 1;
 
             document.getElementById('create-modal').classList.remove('hidden');
+        }
+
+        async function testAgent(id, name) {
+            const message = prompt(`Send a test message to ${name}:`, 'Hello! Tell me about your environment.');
+            if (!message) return;
+
+            try {
+                const res = await fetch(`/api/test-agent/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    alert('Response:\n\n' + data.output);
+                }
+            } catch (e) {
+                alert('Failed to test agent: ' + e.message);
+            }
         }
 
         function openModal() {
@@ -694,6 +1131,29 @@
         window.addEventListener('resize', () => {
             if (fitAddon) fitAddon.fit();
         });
+
+        // Interactive Mascot
+        const authMascot = document.getElementById('auth-mascot');
+        const leftClawAuth = document.getElementById('left-claw-auth');
+        const rightClawAuth = document.getElementById('right-claw-auth');
+        const crabBodyAuth = document.getElementById('crab-body-auth');
+
+        if (authMascot) {
+            authMascot.addEventListener('mousedown', () => {
+                if (leftClawAuth) leftClawAuth.style.transform = 'rotate(-30deg) scale(1.2)';
+                if (rightClawAuth) rightClawAuth.style.transform = 'rotate(30deg) scale(1.2)';
+            });
+
+            authMascot.addEventListener('mouseup', () => {
+                if (leftClawAuth) leftClawAuth.style.transform = 'rotate(0deg) scale(1)';
+                if (rightClawAuth) rightClawAuth.style.transform = 'rotate(0deg) scale(1)';
+            });
+
+            authMascot.addEventListener('mouseleave', () => {
+                if (leftClawAuth) leftClawAuth.style.transform = 'rotate(0deg) scale(1)';
+                if (rightClawAuth) rightClawAuth.style.transform = 'rotate(0deg) scale(1)';
+            });
+        }
 
         init();
     </script>

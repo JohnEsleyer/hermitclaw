@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
-use tools::execute_command;
+use tools::{build_meeting_prompt, execute_command, extract_delegate_action};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
@@ -77,6 +77,10 @@ fn main() {
         .unwrap_or_else(|_| "1000".to_string())
         .parse()
         .unwrap_or(1000);
+    let agent_id: i32 = env::var("AGENT_ID")
+        .unwrap_or_else(|_| "0".to_string())
+        .parse()
+        .unwrap_or(0);
 
     let hitl_enabled = env::var("HITL_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
 
@@ -91,12 +95,22 @@ fn main() {
         parse_history_from_file(&history_file)
     };
 
-    let system_prompt = build_system_prompt(&agent_name, &agent_role, &docker_image);
+    let mut system_prompt = build_system_prompt(&agent_name, &agent_role, &docker_image);
+    system_prompt.push_str(&build_meeting_prompt());
+
+    let memory_context = fetch_memory_from_shell(agent_id, &user_msg);
 
     let mut messages = vec![Message {
         role: "system".to_string(),
         content: system_prompt,
     }];
+
+    if !memory_context.is_empty() {
+        messages.push(Message {
+            role: "system".to_string(),
+            content: format!("Relevant past memories:\n{}", memory_context),
+        });
+    }
 
     for msg in &history {
         messages.push(msg.clone());
@@ -116,6 +130,22 @@ fn main() {
 
         match client.complete(&messages, max_tokens) {
             Ok((response, _tokens)) => {
+                if let Some((role, task)) = extract_delegate_action(&response) {
+                    println!("[MEETING] Sub-task delegation requested...");
+                    println!("[MEETING] TARGET_ROLE: {}", role);
+                    println!("[MEETING] TASK: {}", task);
+
+                    messages.push(Message {
+                        role: "assistant".to_string(),
+                        content: response.clone(),
+                    });
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: "Delegation request logged. Continue with your work while waiting for the sub-agent response.".to_string(),
+                    });
+                    continue;
+                }
+
                 if let Some(cmd) = extract_command(&response) {
                     messages.push(Message {
                         role: "assistant".to_string(),
@@ -173,6 +203,30 @@ fn main() {
         eprintln!("Max iterations reached");
         std::process::exit(1);
     }
+}
+
+fn fetch_memory_from_shell(agent_id: i32, _query: &str) -> String {
+    if agent_id == 0 {
+        return String::new();
+    }
+
+    let memory_file = format!("/tmp/hermit_memory_{}.json", agent_id);
+    if let Ok(contents) = fs::read_to_string(&memory_file) {
+        if let Ok(memories) = serde_json::from_str::<Vec<MemoryEntry>>(&contents) {
+            return memories
+                .iter()
+                .map(|m| format!("- {}", m.content))
+                .collect::<Vec<_>>()
+                .join("\n");
+        }
+    }
+
+    String::new()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MemoryEntry {
+    content: String,
 }
 
 fn parse_history_from_base64(encoded: &str) -> Vec<Message> {
