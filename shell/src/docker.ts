@@ -1,6 +1,8 @@
 import Docker from 'dockerode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createAuditLog, getAgentById } from './db';
+import { sendApprovalRequest } from './telegram';
 
 let docker: Docker;
 
@@ -23,6 +25,7 @@ interface AgentConfig {
     userMessage: string;
     history: Message[];
     maxTokens: number;
+    requireApproval?: boolean;
 }
 
 interface SpawnResult {
@@ -30,19 +33,32 @@ interface SpawnResult {
     output: string;
 }
 
+const HISTORY_DIR = path.join(__dirname, '../../data/history_buffer');
+if (!fs.existsSync(HISTORY_DIR)) fs.mkdirSync(HISTORY_DIR, { recursive: true });
+
 export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
     const imageName = config.dockerImage || 'hermit/base:latest';
     
-    const historyJson = JSON.stringify(config.history);
-    
+    const historyFile = path.join(HISTORY_DIR, `${config.agentId}_${Date.now()}.json`);
+    try {
+        fs.writeFileSync(historyFile, JSON.stringify(config.history));
+    } catch (err) {
+        console.error('Failed to write history file:', err);
+        throw new Error('Failed to create history buffer');
+    }
+
     const envVars = [
         `USER_MSG=${config.userMessage}`,
-        `HISTORY=${Buffer.from(historyJson).toString('base64')}`,
         `MAX_TOKENS=${config.maxTokens}`,
         `AGENT_NAME=${config.agentName}`,
         `AGENT_ROLE=${config.agentRole}`,
         `DOCKER_IMAGE=${config.dockerImage}`,
+        `HISTORY_FILE=/app/history.json`,
     ];
+
+    if (config.requireApproval) {
+        envVars.push('HITL_ENABLED=true');
+    }
 
     if (process.env.OPENAI_API_KEY) {
         envVars.push(`OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`);
@@ -51,70 +67,136 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
         envVars.push(`OPENROUTER_API_KEY=${process.env.OPENROUTER_API_KEY}`);
     }
 
-    const container = await docker.createContainer({
-        Image: imageName,
-        Env: envVars,
-        Cmd: ['crab'],
-        HostConfig: {
-            AutoRemove: true,
-            Memory: 512 * 1024 * 1024,
-            CpuQuota: 100000,
-            PidsLimit: 100,
-            NetworkMode: 'bridge',
-        },
-        AttachStdout: true,
-        AttachStderr: true,
-        Tty: false
-    });
+    let container: Docker.Container | undefined;
+    let containerId = '';
+    
+    try {
+        const createdContainer = await docker.createContainer({
+            Image: imageName,
+            Env: envVars,
+            Cmd: ['crab'],
+            HostConfig: {
+                AutoRemove: true,
+                Memory: 512 * 1024 * 1024,
+                CpuQuota: 100000,
+                PidsLimit: 100,
+                NetworkMode: 'bridge',
+                Binds: [`${historyFile}:/app/history.json:ro`],
+            },
+            AttachStdout: true,
+            AttachStderr: true,
+            Tty: false
+        });
 
-    await container.start();
+        container = createdContainer;
+        const currentContainerId = container.id;
+        containerId = currentContainerId;
 
-    const logs = await container.logs({
-        follow: true,
-        stdout: true,
-        stderr: true,
-        tail: 500
-    });
+        await container.start();
 
-    return new Promise((resolve, reject) => {
-        let output = '';
-        
-        const stream = typeof logs === 'string' ? null : logs;
-        
-        const timeout = setTimeout(async () => {
-            try {
-                await container.stop();
-            } catch {}
-        }, 60000);
-
-        if (stream) {
-            stream.on('data', (chunk: Buffer) => {
-                output += chunk.toString();
-            });
+        return await new Promise((resolve, reject) => {
+            let output = '';
+            let approvalLogId: number | null = null;
             
-            stream.on('end', () => {
-                clearTimeout(timeout);
+            const timeout = setTimeout(async () => {
+                try {
+                    if (container) await container.stop();
+                } catch {}
                 const lines = output.split('\n').filter((l: string) => l.trim() && !l.startsWith('{'));
-                const result = lines.join('\n').trim();
                 resolve({
-                    containerId: container.id,
-                    output: result || 'No response from agent'
+                    containerId: currentContainerId,
+                    output: lines.join('\n').trim() || 'Timeout reached'
+                });
+            }, 120000);
+
+            if (!container) {
+                cleanup();
+                resolve({ containerId: '', output: 'Container not created' });
+                return;
+            }
+
+            container.logs({
+                follow: true,
+                stdout: true,
+                stderr: true,
+                tail: 500
+            }, async (err, stream) => {
+                if (err) {
+                    clearTimeout(timeout);
+                    cleanup();
+                    reject(err);
+                    return;
+                }
+
+                if (!stream) {
+                    clearTimeout(timeout);
+                    cleanup();
+                    resolve({ containerId: currentContainerId, output: 'No stream available' });
+                    return;
+                }
+
+                stream.on('data', async (chunk: Buffer) => {
+                    const line = chunk.toString();
+                    output += line;
+                    
+                    if (line.includes('[HITL] APPROVAL_REQUIRED:')) {
+                        try {
+                            const cmd = line.split('REQUIRED:')[1]?.trim() || 'Unknown command';
+                            approvalLogId = await createAuditLog(config.agentId, currentContainerId, cmd, 'Pending approval');
+                            
+                            const agent = await getAgentById(config.agentId);
+                            await sendApprovalRequest(
+                                config.agentId,
+                                currentContainerId,
+                                cmd,
+                                approvalLogId
+                            );
+                        } catch (err) {
+                            console.error('Error sending approval request:', err);
+                        }
+                    }
+
+                    if (line.includes('[HITL] APPROVED') || line.includes('[HITL] EXECUTED')) {
+                        if (approvalLogId) {
+                            const { updateAuditLog } = await import('./db');
+                            updateAuditLog(approvalLogId, 'approved');
+                        }
+                    }
+                });
+
+                stream.on('end', () => {
+                    clearTimeout(timeout);
+                    cleanup();
+                    const lines = output.split('\n').filter((l: string) => l.trim() && !l.startsWith('{'));
+                    resolve({
+                        containerId: currentContainerId,
+                        output: lines.join('\n').trim() || 'No response from agent'
+                    });
+                });
+
+                stream.on('error', (err: Error) => {
+                    clearTimeout(timeout);
+                    cleanup();
+                    reject(err);
                 });
             });
-            
-            stream.on('error', (err: Error) => {
-                clearTimeout(timeout);
-                reject(err);
-            });
-        } else {
-            clearTimeout(timeout);
-            const lines = output.split('\n').filter((l: string) => l.trim() && !l.startsWith('{'));
-            resolve({
-                containerId: container.id,
-                output: lines.join('\n').trim() || 'No response from agent'
-            });
-        }
-    });
+
+            function cleanup() {
+                try {
+                    fs.unlinkSync(historyFile);
+                } catch {}
+            }
+        });
+    } catch (error: any) {
+        console.error('Docker Spawn Error:', error);
+        try {
+            if (container) await container.remove({ force: true });
+        } catch {}
+        try {
+            fs.unlinkSync(historyFile);
+        } catch {}
+        throw new Error(`Failed to spawn cubicle: ${error.message}`);
+    }
 }
 
 export async function listContainers(): Promise<Docker.ContainerInfo[]> {
@@ -139,3 +221,17 @@ export function getAvailableImages(): string[] {
         'hermit-crab:latest'
     ];
 }
+
+export async function getContainerExec(containerId: string): Promise<Docker.Exec> {
+    const container = docker.getContainer(containerId);
+    const exec = await container.exec({
+        AttachStdin: true,
+        AttachStdout: true,
+        AttachStderr: true,
+        Tty: true,
+        Cmd: ['/bin/bash']
+    });
+    return exec;
+}
+
+export { docker };
