@@ -37,53 +37,7 @@ if [ ! -f shell/.env ]; then
     echo "✅ Created shell/.env - please add your API keys"
 fi
 
-echo "🔐 Setting up SQLite database..."
-sqlite3 data/db/hermit.db << 'EOF'
-CREATE TABLE IF NOT EXISTS agents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    role TEXT,
-    telegram_token TEXT UNIQUE,
-    system_prompt TEXT,
-    docker_image TEXT DEFAULT 'hermit/base',
-    is_active INTEGER DEFAULT 1,
-    require_approval INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS budgets (
-    agent_id INTEGER PRIMARY KEY,
-    daily_limit_usd REAL DEFAULT 1.00,
-    current_spend_usd REAL DEFAULT 0.00,
-    last_reset_date TEXT DEFAULT (date('now')),
-    FOREIGN KEY (agent_id) REFERENCES agents(id)
-);
-
-CREATE TABLE IF NOT EXISTS allowlist (
-    user_id INTEGER PRIMARY KEY,
-    username TEXT,
-    first_name TEXT,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS meetings (
-    id TEXT PRIMARY KEY,
-    initiator_agent_id INTEGER,
-    participant_agent_id INTEGER,
-    topic TEXT,
-    transcript TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-);
-
-INSERT OR IGNORE INTO settings (key, value) VALUES ('default_provider', 'openrouter');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('default_model', 'anthropic/claude-3-haiku');
-EOF
-echo "✅ Database initialized"
+echo "🔐 Database will be initialized on first run..."
 
 echo "🦀 Building Docker images (this may take a few minutes)..."
 

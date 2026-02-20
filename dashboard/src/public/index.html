@@ -215,6 +215,10 @@
                 </div>
                 
                 <div class="flex items-center space-x-4">
+                    <button onclick="syncWebhooks(event)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2" title="Reconnect bots to Telegram">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Sync Bots</span>
+                    </button>
                     <button onclick="openModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i>
                         <span>Spawn Agent</span>
@@ -649,9 +653,10 @@
                     <div class="text-sm text-slate-300 space-y-2 mb-4">
                         <p><strong>Important:</strong></p>
                         <ol class="list-decimal list-inside text-slate-400 space-y-1">
-                            <li>Make sure you've sent <code class="bg-slate-700 px-1 rounded">/start</code> to your new bot on Telegram</li>
-                            <li>Click "Send Code" to receive a 6-digit verification code</li>
-                            <li>The code will be sent to the Operator's Telegram</li>
+                            <li>Click <strong>"Send Verification Code"</strong> below.</li>
+                            <li>Check your Operator Telegram account for the 6-digit code.</li>
+                            <li>Enter the code in the next step to validate the agent.</li>
+                            <li><em>After</em> validation, go to your bot on Telegram and send <code class="bg-slate-700 px-1 rounded">/start</code></li>
                         </ol>
                     </div>
                     
@@ -733,6 +738,36 @@
                     <i data-lucide="check" class="w-4 h-4"></i>
                     <span>Create Agent</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Agent Modal -->
+    <div id="test-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center border-b border-slate-700">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="play-circle" class="w-5 h-5 text-green-500"></i>
+                    Agent Test Result
+                </h3>
+                <button onclick="closeTestModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <div id="test-loading" class="hidden flex flex-col items-center justify-center py-10 space-y-4">
+                    <i data-lucide="loader-2" class="w-8 h-8 text-orange-500 animate-spin"></i>
+                    <p class="text-slate-400">Agent is processing your request...</p>
+                </div>
+                <div id="test-content" class="hidden">
+                    <div class="bg-[#0c0a09] border border-slate-800 rounded-lg p-4 relative group">
+                        <button onclick="copyTestOutput()" class="absolute top-2 right-2 p-2 bg-slate-800 rounded-md text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" title="Copy to clipboard">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <pre id="test-output" class="text-green-400 font-mono text-sm whitespace-pre-wrap break-words"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-800/50 px-6 py-4 border-t border-slate-700 flex justify-end">
+                <button onclick="closeTestModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors">Close</button>
             </div>
         </div>
     </div>
@@ -1048,8 +1083,10 @@ cloudflared tunnel url hermitclaw
                 el.classList.remove('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
                 el.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
             });
-            event.target.closest('.nav-item').classList.add('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
-            event.target.closest('.nav-item').classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+            if (typeof event !== 'undefined' && event && event.target) {
+                event.target.closest('.nav-item').classList.add('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
+                event.target.closest('.nav-item').classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+            }
 
             document.getElementById('section-agents').classList.add('hidden');
             document.getElementById('section-audit').classList.add('hidden');
@@ -1302,9 +1339,7 @@ cloudflared tunnel url hermitclaw
                 const tbody = document.getElementById('cubicles-tbody');
                 const empty = document.getElementById('cubicles-empty');
 
-                const hermitContainers = containers.filter(c => 
-                    c.Image && (c.Image.startsWith('hermit/') || c.Image.startsWith('hermit-crab'))
-                );
+                const hermitContainers = containers;
 
                 if (hermitContainers.length === 0) {
                     tbody.innerHTML = '';
@@ -1317,15 +1352,24 @@ cloudflared tunnel url hermitclaw
                 tbody.innerHTML = hermitContainers.map(c => {
                     const statusColor = c.State === 'running' ? 'text-green-400' : c.State === 'exited' ? 'text-red-400' : 'text-yellow-400';
                     const statusIcon = c.State === 'running' ? '●' : '○';
+                    
+                    const name = c.Names && c.Names[0] ? c.Names[0].replace('/', '') : 'cubicle';
+                    
                     return `
                         <tr class="hover:bg-white/5">
-                            <td class="px-4 py-3 font-mono text-slate-400">${c.Id.substring(0, 12)}</td>
+                            <td class="px-4 py-3 font-mono text-slate-400">
+                                <div>${c.Id.substring(0, 12)}</div>
+                                <div class="text-[10px] text-slate-500">${name}</div>
+                            </td>
                             <td class="px-4 py-3">${c.Image}</td>
                             <td class="px-4 py-3 ${statusColor} font-mono">${statusIcon} ${c.State.toUpperCase()}</td>
                             <td class="px-4 py-3 text-slate-400">${c.Status}</td>
                             <td class="px-4 py-3 flex gap-2">
                                 <button onclick="viewContainer('${c.Id}')" class="text-orange-500 hover:text-white text-xs">Terminal</button>
-                                <button onclick="stopContainer('${c.Id}')" class="text-red-400 hover:text-white text-xs">Stop</button>
+                                ${c.State === 'running' 
+                                    ? `<button onclick="stopContainer('${c.Id}')" class="text-yellow-400 hover:text-white text-xs">Stop</button>` 
+                                    : `<button onclick="startContainer('${c.Id}')" class="text-green-400 hover:text-white text-xs">Start</button>`}
+                                <button onclick="deleteContainer('${c.Id}')" class="text-red-400 hover:text-white text-xs">Delete</button>
                             </td>
                         </tr>
                     `;
@@ -1336,14 +1380,45 @@ cloudflared tunnel url hermitclaw
             }
         }
 
+        async function startContainer(containerId) {
+            try {
+                const res = await fetch(`/api/containers/${containerId}/start`, { method: 'POST' });
+                if (res.ok) {
+                    loadCubicles();
+                    loadStats();
+                } else {
+                    alert('Failed to start container');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
         async function stopContainer(containerId) {
             if (!confirm('Stop this container?')) return;
             try {
                 const res = await fetch(`/api/containers/${containerId}/stop`, { method: 'POST' });
                 if (res.ok) {
                     loadCubicles();
+                    loadStats();
                 } else {
                     alert('Failed to stop container');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteContainer(containerId) {
+            if (!confirm('Delete this container? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/containers/${containerId}/remove`, { method: 'POST' });
+                if (res.ok) {
+                    loadCubicles();
+                    loadStats();
+                } else {
+                    const data = await res.json();
+                    alert('Failed to delete container: ' + (data.error || 'Unknown error'));
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
@@ -1597,6 +1672,11 @@ cloudflared tunnel url hermitclaw
             const message = prompt(`Send a test message to ${name}:`, 'Hello! Tell me about your environment.');
             if (!message) return;
 
+            document.getElementById('test-modal').classList.remove('hidden');
+            document.getElementById('test-loading').classList.remove('hidden');
+            document.getElementById('test-content').classList.add('hidden');
+            lucide.createIcons();
+
             try {
                 const res = await fetch(`/api/test-agent/${id}`, {
                     method: 'POST',
@@ -1605,17 +1685,64 @@ cloudflared tunnel url hermitclaw
                 });
                 const data = await res.json();
 
+                document.getElementById('test-loading').classList.add('hidden');
+                document.getElementById('test-content').classList.remove('hidden');
+
+                const outputEl = document.getElementById('test-output');
                 if (data.error) {
-                    alert('Error: ' + data.error);
+                    outputEl.innerText = 'ERROR:\n' + data.error;
+                    outputEl.classList.add('text-red-400');
+                    outputEl.classList.remove('text-green-400');
                 } else {
-                    alert('Response:\n\n' + data.output);
+                    outputEl.innerText = data.output;
+                    outputEl.classList.add('text-green-400');
+                    outputEl.classList.remove('text-red-400');
                 }
             } catch (e) {
-                alert('Failed to test agent: ' + e.message);
+                document.getElementById('test-loading').classList.add('hidden');
+                document.getElementById('test-content').classList.remove('hidden');
+                
+                const outputEl = document.getElementById('test-output');
+                outputEl.innerText = 'Failed to test agent: ' + e.message;
+                outputEl.classList.add('text-red-400');
+                outputEl.classList.remove('text-green-400');
             }
         }
 
-        function openModal() {
+        function closeTestModal() {
+            document.getElementById('test-modal').classList.add('hidden');
+        }
+
+        function copyTestOutput() {
+            const output = document.getElementById('test-output').innerText;
+            navigator.clipboard.writeText(output).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        async function openModal() {
+            try {
+                const res = await fetch('/api/settings');
+                const settings = await res.json();
+                
+                if (!settings.operator_telegram_id || !settings.public_url) {
+                    alert('⚠️ Action Required\n\nPlease set both your "Operator Telegram ID" and "Public URL" in the Settings tab before spawning an agent. Telegram needs the Public URL to push messages to your bot.');
+                    showSection('settings');
+                    return;
+                }
+
+                const provider = settings.default_provider || 'openrouter';
+                const apiKeyField = `${provider}_api_key`;
+                if (!settings[apiKeyField]) {
+                    alert(`⚠️ Missing API Key\n\nYou are using '${provider}' as your LLM provider, but its API key is missing.\n\nPlease go to Settings -> API Keys, enter your key, and click "Save All Settings".`);
+                    showSection('settings');
+                    return;
+                }
+
+            } catch (e) {
+                console.error("Failed to fetch settings", e);
+            }
+
             document.getElementById('new-name').value = '';
             document.getElementById('new-role').value = '';
             document.getElementById('new-token').value = '';
@@ -1699,6 +1826,27 @@ cloudflared tunnel url hermitclaw
             } else if (wizardStep === 2) {
                 wizardStep = 3;
                 updateWizardUI();
+            }
+        }
+
+        async function syncWebhooks(event) {
+            const btn = event.currentTarget;
+            const icon = btn.querySelector('i');
+            icon.classList.add('animate-spin');
+            
+            try {
+                const res = await fetch('/api/webhooks/sync', { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert(`✅ Successfully synced ${data.count} of ${data.total} active bots with Telegram.`);
+                } else {
+                    alert('❌ Failed to sync webhooks: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('❌ Network error: ' + e.message);
+            } finally {
+                icon.classList.remove('animate-spin');
             }
         }
 

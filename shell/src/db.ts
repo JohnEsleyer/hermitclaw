@@ -142,7 +142,20 @@ export async function initDb(): Promise<void> {
             FOREIGN KEY (initiator_id) REFERENCES agents(id),
             FOREIGN KEY (participant_id) REFERENCES agents(id)
         );
+    `);
 
+    try {
+        await db.execute('ALTER TABLE allowlist ADD COLUMN is_operator INTEGER DEFAULT 0');
+    } catch (e) {
+    }
+
+    try {
+        await db.execute('ALTER TABLE audit_logs ADD COLUMN approved_by INTEGER');
+        await db.execute('ALTER TABLE audit_logs ADD COLUMN approved_at DATETIME');
+    } catch (e) {
+    }
+
+    await db.executeMultiple(`
         INSERT OR IGNORE INTO settings (key, value) VALUES ('default_provider', 'openrouter');
         INSERT OR IGNORE INTO settings (key, value) VALUES ('default_model', 'auto');
         INSERT OR IGNORE INTO settings (key, value) VALUES ('public_url', '');

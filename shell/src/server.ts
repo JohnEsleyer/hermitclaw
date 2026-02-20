@@ -1,9 +1,9 @@
-import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands } from './telegram';
+import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands, registerWebhook } from './telegram';
 import { 
     getAllAgents, isAllowed, initDb, getAdminCount, createAdmin, getAdmin,
     getAllSettings, setSetting, getBudget, getAllowlist, addToAllowlist, removeFromAllowlist,
     getTotalSpend, getAllBudgets, updateAgent, deleteAgent, updateBudget, createAgent,
-    getAuditLogs, getAgentById, getSetting, setOperator, getOperator
+    getAuditLogs, getAgentById, getAgentByToken, getSetting, setOperator, getOperator
 } from './db';
 import { checkDocker, listContainers, getContainerExec, docker, spawnAgent, hibernateIdleContainers, cleanupOldContainers } from './docker';
 import { hashPassword, verifyPassword, generateSessionToken } from './auth';
@@ -157,7 +157,13 @@ export async function startServer() {
         const settings = request.body;
         for (const [key, value] of Object.entries(settings)) {
             if (value !== undefined && value !== null) {
-                await setSetting(key, String(value));
+                const valStr = String(value).trim();
+                await setSetting(key, valStr);
+                
+                if (key === 'operator_telegram_id' && valStr) {
+                    await addToAllowlist(Number(valStr), 'operator', 'Operator', true);
+                    await setOperator(Number(valStr));
+                }
             }
         }
         return { success: true };
@@ -209,19 +215,33 @@ export async function startServer() {
             });
         }
 
-        const webhookUrl = `${baseUrl}/webhook/${token}?secret=${encodeURIComponent(WEBHOOK_SECRET)}`;
-        const tgUrl = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}&secret_token=${encodeURIComponent(WEBHOOK_SECRET)}`;
-        
-        try {
-            const response = await fetch(tgUrl);
-            const data = await response.json();
-            
-            await setBotCommands(token);
-            
-            return data;
-        } catch (e: any) {
-            return reply.code(500).send({ error: e.message });
+        const success = await registerWebhook(token, baseUrl, WEBHOOK_SECRET);
+        if (success) {
+            return { ok: true, description: "Webhook was set successfully" };
+        } else {
+            return reply.code(500).send({ error: "Failed to set webhook. Check your Public url and Token." });
         }
+    });
+
+    fastify.post('/api/webhooks/sync', async (_request: any, reply: any) => {
+        const settings = await getAllSettings();
+        const baseUrl = settings.public_url;
+        
+        if (!baseUrl) {
+            return reply.code(400).send({ error: 'Public URL not configured. Set it in Settings first.' });
+        }
+
+        const agents = await getAllAgents();
+        let successCount = 0;
+        
+        for (const agent of agents) {
+            if (agent.is_active && agent.telegram_token) {
+                const ok = await registerWebhook(agent.telegram_token, baseUrl, WEBHOOK_SECRET);
+                if (ok) successCount++;
+            }
+        }
+        
+        return { success: true, count: successCount, total: agents.length };
     });
 
     fastify.get('/api/agents', async () => {
@@ -288,6 +308,11 @@ export async function startServer() {
                 require_approval: agentData.require_approval || 0
             });
             
+            const settings = await getAllSettings();
+            if (settings.public_url) {
+                await registerWebhook(token, settings.public_url, WEBHOOK_SECRET);
+            }
+
             pendingVerifications.delete(token);
             return { success: true, id };
         } catch (e: any) {
@@ -355,6 +380,11 @@ export async function startServer() {
                 maxTokens: 1000,
                 requireApproval: false
             });
+            
+            if (result.output.includes('401') && (result.output.includes('Unauthorized') || result.output.includes('Authentication'))) {
+                result.output = `❌ API Key Error (401 Unauthorized)\n\nYour API key is missing or invalid.\n\nHow to fix:\n1. Go to Settings -> API Keys\n2. Enter a valid key and click Save\n3. Go to Cubicles tab and Delete the existing container\n4. Try testing again.`;
+            }
+
             return { output: result.output, containerId: result.containerId };
         } catch (e: any) {
             return reply.code(500).send({ error: e.message });
@@ -366,10 +396,11 @@ export async function startServer() {
     });
 
     fastify.post('/webhook/:token', async (request: any, reply: any) => {
+        const cleanSecret = WEBHOOK_SECRET.replace(/[^a-zA-Z0-9_-]/g, '') || 'hermitSecret123';
         const requestSecret = request.query.secret;
         const headerSecret = request.headers['x-telegram-bot-api-secret-token'];
         
-        if (requestSecret !== WEBHOOK_SECRET && headerSecret !== WEBHOOK_SECRET) {
+        if (requestSecret !== cleanSecret && headerSecret !== cleanSecret) {
             return reply.code(403).send({ error: 'Forbidden: Invalid webhook secret' });
         }
         
@@ -394,7 +425,7 @@ export async function startServer() {
                     const text = update.message.text;
                     
                     if (!text.startsWith('/')) {
-                        const agent = await getAgentById?.(parseInt(token.split(':')[0] || '0'));
+                        const agent = await getAgentByToken(token);
                         const agentName = agent?.name || update.message.from?.first_name || 'Agent';
                         const statusMsg = await sendTelegramMessage(token, chatId, `🔄 *${agentName}* is waking up...`);
                         
@@ -422,6 +453,17 @@ export async function startServer() {
         try {
             const container = docker.getContainer(containerId);
             await container.stop();
+            return { success: true };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
+    fastify.post('/api/containers/:id/start', async (request: any, reply: any) => {
+        const containerId = request.params.id;
+        try {
+            const container = docker.getContainer(containerId);
+            await container.start();
             return { success: true };
         } catch (e: any) {
             return reply.code(500).send({ error: e.message });

@@ -430,6 +430,10 @@ export async function processAgentMessage(
             userId: userId
         });
 
+        if (result.output.includes('401') && (result.output.includes('Unauthorized') || result.output.includes('Authentication'))) {
+            result.output = `❌ *API Key Error (401 Unauthorized)*\n\nYour API key is either missing or invalid for this provider.\n\n*How to fix:*\n1. Open Dashboard -> Settings\n2. Enter a valid API key\n3. Click "Save All Settings"\n4. Send \`/reset\` here to delete this broken cubicle and apply your new keys!`;
+        }
+
         if (result.output.includes('[MEETING]') && result.output.includes('TARGET_ROLE:')) {
             const roleMatch = result.output.match(/TARGET_ROLE:\s*(.+)/);
             const taskMatch = result.output.match(/TASK:\s*(.+)/);
@@ -698,6 +702,29 @@ export async function editMessageText(token: string, chatId: number, messageId: 
         });
     } catch (err) {
         console.error('Failed to edit message:', err);
+    }
+}
+
+export async function registerWebhook(token: string, baseUrl: string, secret: string): Promise<boolean> {
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const cleanSecret = secret.replace(/[^a-zA-Z0-9_-]/g, '') || 'hermitSecret123';
+    
+    try {
+        const webhookUrl = `${cleanBaseUrl}/webhook/${token}?secret=${encodeURIComponent(cleanSecret)}`;
+        const tgUrl = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}&secret_token=${cleanSecret}`;
+        
+        const response = await fetch(tgUrl);
+        const data = await response.json() as any;
+        
+        if (data.ok) {
+            await setBotCommands(token);
+            return true;
+        }
+        console.error(`Failed to set webhook for token ${token.substring(0,8)}...:`, data);
+        return false;
+    } catch (e) {
+        console.error('Error setting webhook:', e);
+        return false;
     }
 }
 
