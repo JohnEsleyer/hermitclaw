@@ -79,7 +79,10 @@ export async function smartReply(token: string, chatId: number, text: string, me
         }
     } else {
         if (messageId) {
-            await editMessageText(token, chatId, messageId, text);
+            const edited = await editMessageText(token, chatId, messageId, text);
+            if (!edited) {
+                await sendTelegramMessage(token, chatId, text);
+            }
         } else {
             await sendTelegramMessage(token, chatId, text);
         }
@@ -681,22 +684,49 @@ export async function sendTelegramMessage(token: string, chatId: number, text: s
     }
 }
 
-export async function editMessageText(token: string, chatId: number, messageId: number, text: string): Promise<void> {
+export async function editMessageText(token: string, chatId: number, messageId: number, text: string): Promise<boolean> {
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
-    
-    try {
-        await fetch(url, {
+
+    const edit = async (payload: Record<string, any>) => {
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: JSON.stringify(payload)
+        });
+        return await response.json() as { ok: boolean; description?: string };
+    };
+    
+    try {
+        let data = await edit({
+            chat_id: chatId,
+            message_id: messageId,
+            text: text,
+            parse_mode: 'Markdown'
+        });
+
+        if (!data.ok) {
+            if (data.description?.includes('message is not modified')) {
+                return true;
+            }
+            data = await edit({
                 chat_id: chatId,
                 message_id: messageId,
-                text: text,
-                parse_mode: 'Markdown'
-            })
-        });
+                text: text
+            });
+        }
+
+        if (!data.ok) {
+            if (data.description?.includes('message is not modified')) {
+                return true;
+            }
+            console.error('Failed to edit Telegram message:', data.description || 'Unknown API error');
+            return false;
+        }
+
+        return true;
     } catch (err) {
         console.error('Failed to edit message:', err);
+        return false;
     }
 }
 
