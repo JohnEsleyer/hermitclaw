@@ -42,6 +42,18 @@ export async function startServer() {
         '/dashboard/'
     ];
 
+    const getSessionToken = (request: any): string | undefined => {
+        const cookieToken = request.cookies?.crabshell_session;
+        if (cookieToken) return cookieToken;
+
+        const authHeader = request.headers?.authorization;
+        if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+            return authHeader.slice(7).trim();
+        }
+
+        return undefined;
+    };
+
     fastify.addHook('preHandler', async (request: any, reply: any) => {
         if (request.url.startsWith('/webhook/')) return;
         if (request.url.startsWith('/api/terminal')) return;
@@ -53,7 +65,7 @@ export async function startServer() {
 
         if (request.url.startsWith('/api/auth')) return;
 
-        const token = request.cookies.crabshell_session;
+        const token = getSessionToken(request);
         if (!token) {
             reply.code(401).send({ error: 'Unauthorized' });
             return;
@@ -75,7 +87,7 @@ export async function startServer() {
         }
         
         const operator = await getOperator();
-        const token = request.cookies.crabshell_session;
+        const token = getSessionToken(request);
         if (token) {
             return { status: 'authenticated', hasOperator: !!operator, usingDefault };
         }
@@ -101,7 +113,7 @@ export async function startServer() {
             maxAge: 60 * 60 * 24 * 7
         });
 
-        return { success: true };
+        return { success: true, token };
     });
 
     fastify.post('/api/auth/logout', async (request: any, reply: any) => {

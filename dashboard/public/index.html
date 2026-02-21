@@ -1079,6 +1079,33 @@ cloudflared tunnel url crabshell
         let pendingVerificationToken = null;
         window.usingDefaultCreds = false;
 
+        const AUTH_TOKEN_KEY = 'crabshell_session_token';
+        const nativeFetch = window.fetch.bind(window);
+
+        function getStoredSessionToken() {
+            return localStorage.getItem(AUTH_TOKEN_KEY);
+        }
+
+        function setStoredSessionToken(token) {
+            if (token) {
+                localStorage.setItem(AUTH_TOKEN_KEY, token);
+            } else {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+            }
+        }
+
+        window.fetch = (input, init = {}) => {
+            const token = getStoredSessionToken();
+            if (!token) return nativeFetch(input, init);
+
+            const headers = new Headers(init.headers || {});
+            if (!headers.has('Authorization')) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+
+            return nativeFetch(input, { ...init, headers });
+        };
+
         function openWebhookGuide() {
             document.getElementById('webhook-guide-modal').classList.remove('hidden');
             lucide.createIcons();
@@ -1396,9 +1423,14 @@ cloudflared tunnel url crabshell
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-btn');
+            
             errorDiv.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerText = 'Authenticating...';
 
             try {
+                console.log('Attempting login for:', username);
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1406,18 +1438,30 @@ cloudflared tunnel url crabshell
                 });
                 
                 const data = await res.json();
+                console.log('Login response:', res.status, data);
 
-                if (!res.ok) throw new Error(data.error || 'Invalid credentials');
-                
+                if (!res.ok) {
+                    throw new Error(data.error || `Login failed (${res.status})`);
+                }
+
+                if (data.token) {
+                    setStoredSessionToken(data.token);
+                }
+
+                alert('Login successful! Redirecting...');
                 window.location.reload();
             } catch (err) {
-                errorDiv.innerText = `ERROR: ${err.message}`;
+                console.error('Login error:', err);
+                errorDiv.innerText = err.message;
                 errorDiv.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = 'Authenticate';
             }
         }
 
         async function logout() {
             await fetch('/api/auth/logout', { method: 'POST' });
+            setStoredSessionToken(null);
             window.location.reload();
         }
 
@@ -2231,7 +2275,7 @@ cloudflared tunnel url crabshell
                 const data = await res.json();
                 const cleanLogs = data.logs.replace(/\n/g, '\r\n').replace(/\x1b\[[0-9;]*m/g, '');
                 term.write(cleanLogs);
-            } catch (e: any) {
+            } catch (e) {
                 term.writeln(`\x1b[31mError: ${e.message}\x1b[0m`);
             }
         }
