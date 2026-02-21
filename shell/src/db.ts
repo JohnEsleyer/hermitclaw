@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 let client: Client | null = null;
-const DB_PATH = path.join(__dirname, '../../data/db/hermit.db');
+const DB_PATH = path.join(__dirname, '../../data/db/crabshell.db');
 
 async function getClient(): Promise<Client> {
     if (client) return client;

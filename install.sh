@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "🐚 HermitClaw Installation"
-echo "=========================="
+echo "🦀 CrabShell Installation"
+echo "========================="
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -131,9 +131,9 @@ cp -r dashboard/src/public/* shell/dashboard/dist/ 2>/dev/null || true
 
 echo ""
 echo "✅ INSTALLATION COMPLETE!"
-echo "=========================="
+echo "========================="
 echo ""
-echo "🌍 To start HermitClaw:"
+echo "🌍 To start CrabShell:"
 echo "   cd shell && npm start"
 echo ""
 echo "   Then open: http://localhost:3000/dashboard/"

@@ -24,12 +24,15 @@ interface AgentConfig {
     maxTokens: number;
     requireApproval?: boolean;
     userId?: number;
+    onProgress?: ProgressCallback;
 }
 
 interface SpawnResult {
     containerId: string;
     output: string;
 }
+
+type ProgressCallback = (status: string, details?: string) => void;
 
 const WORKSPACE_DIR = path.join(__dirname, '../../data/workspaces');
 const CACHE_DIR = path.join(__dirname, '../../data/cache');
@@ -38,7 +41,7 @@ const CACHE_DIR = path.join(__dirname, '../../data/cache');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-const LABEL_PREFIX = 'hermitclaw.';
+const LABEL_PREFIX = 'crabshell.';
 const LABELS = {
     AGENT_ID: `${LABEL_PREFIX}agent_id`,
     USER_ID: `${LABEL_PREFIX}user_id`,
@@ -193,7 +196,7 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
         const historyB64 = Buffer.from(JSON.stringify(config.history)).toString('base64');
         
         const exec = await container.exec({
-            Cmd: ['crab'],
+            Cmd: ['sh', '-c', 'crab 2>&1 | tee -a /app/workspace/.hermit.log'],
             Env: [
                 `USER_MSG=${config.userMessage}`,
                 `HISTORY=${historyB64}`,
@@ -209,31 +212,80 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
         return await new Promise((resolve, reject) => {
             let output = '';
             let approvalLogId: number | null = null;
+            let lastProgressUpdate = 0;
+            let commandCount = 0;
+            
+            const sendProgress = (status: string, details?: string) => {
+                const now = Date.now();
+                if (now - lastProgressUpdate > 500) {
+                    config.onProgress?.(status, details);
+                    lastProgressUpdate = now;
+                }
+            };
             
             const outStream = new PassThrough();
             outStream.on('data', async (chunk: Buffer) => {
                 const line = chunk.toString('utf8');
                 output += line;
                 
+                if (line.includes('COMMAND:')) {
+                    commandCount++;
+                    const cmd = line.split('COMMAND:')[1]?.split('\n')[0]?.trim() || 'command';
+                    sendProgress(`⚙️ Executing command #${commandCount}`, cmd.slice(0, 50));
+                }
+                if (line.includes('COMMAND_OUTPUT:')) {
+                    sendProgress(`📤 Processing output...`);
+                }
                 if (line.includes('[HITL] APPROVAL_REQUIRED:')) {
                     try {
                         const cmd = line.split('REQUIRED:')[1]?.trim() || 'Unknown command';
                         approvalLogId = await createAuditLog(config.agentId, containerId, cmd, 'Pending approval');
                         await sendApprovalRequest(config.agentId, containerId, cmd, approvalLogId);
+                        sendProgress('⏳ Waiting for approval...', cmd.slice(0, 40));
                     } catch (err) {}
                 }
                 if (line.includes('[HITL] APPROVED') || line.includes('[HITL] EXECUTED')) {
                     if (approvalLogId) await import('./db').then(m => m.updateAuditLog(approvalLogId as number, 'approved'));
                 }
+                if (line.includes('[MEETING]')) {
+                    sendProgress('🤝 Coordinating with other agents...');
+                }
             });
 
             if (stream) {
                 docker.modem.demuxStream(stream, outStream, outStream);
+                
+                sendProgress('🧠 Thinking...');
 
                 stream.on('end', async () => {
                     await updateContainerLastActive(containerId);
-                    const cleanOutput = output.split('\n').filter(l => l.trim() && !l.startsWith('{')).join('\n').trim();
-                    resolve({ containerId, output: cleanOutput || 'No response from agent' });
+                    
+                    const lines = output.split('\n');
+                    const filteredLines = lines.filter(l => {
+                        const trimmed = l.trim();
+                        if (!trimmed) return false;
+                        if (trimmed.startsWith('{')) return false;
+                        if (trimmed.startsWith('[Workspace]')) return false;
+                        if (trimmed.includes('Working directory set to')) return false;
+                        if (trimmed.startsWith('[HITL]')) return false;
+                        if (trimmed.startsWith('[MEETING]')) return false;
+                        if (trimmed.includes('TARGET_ROLE:')) return false;
+                        if (trimmed.includes('DELEGATION_APPROVAL_REQUIRED')) return false;
+                        return true;
+                    });
+                    
+                    let cleanOutput = filteredLines.join('\n').trim();
+                    
+                    if (!cleanOutput || cleanOutput.length < 2) {
+                        if (output.includes('Error:') || output.includes('error')) {
+                            const errorLines = lines.filter(l => l.toLowerCase().includes('error'));
+                            cleanOutput = `❌ Agent error:\n${errorLines.join('\n') || 'Unknown error occurred'}`;
+                        } else {
+                            cleanOutput = `⚠️ Agent completed but produced no visible output.\nTry:\n• Check if API keys are valid\n• Try a simpler request\n• Use /logs to see container logs`;
+                        }
+                    }
+                    
+                    resolve({ containerId, output: cleanOutput });
                 });
 
                 stream.on('error', (err: Error) => reject(err));

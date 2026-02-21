@@ -1,10 +1,10 @@
-# HermitClaw
+# CrabShell
 
 "Intelligence in a Persistent Shell" - A secure, multi-agent AI orchestration platform where each agent lives in its own Docker "cubicle" with persistent workspaces.
 
 ## Overview
 
-HermitClaw is a **Secure Agentic Operating System**. Each AI agent runs in a Docker container ("Cubicle") with its own Telegram bot identity, role, and budget. Containers run continuously until manually stopped, preserving state in persistent workspaces.
+CrabShell is a **Secure Agentic Operating System**. Each AI agent runs in a Docker container ("Cubicle") with its own Telegram bot identity, role, and budget. Containers run continuously until manually stopped, preserving state in persistent workspaces.
 
 ### Key Features
 
@@ -28,13 +28,13 @@ HermitClaw is a **Secure Agentic Operating System**. Each AI agent runs in a Doc
 - **Web Dashboard**: Manage agents, users, and settings via a built-in GUI
 - **File Browser**: Browse and download agent workspace files from dashboard
 - **Manual Container Controls**: Start/Stop/Delete containers from the dashboard
-- **Container Labels**: Track cubicles with `hermitclaw.*` Docker labels
+- **Container Labels**: Track cubicles with `crabshell.*` Docker labels
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     HermitClaw                               │
+│                     CrabShell                               │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │              Web Dashboard (Port 3000)              │   │
 │  │  - Agent Management  - Budget Tracking  - Settings   │   │
@@ -62,7 +62,7 @@ HermitClaw is a **Secure Agentic Operating System**. Each AI agent runs in a Doc
 ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
 │  Agent A      │   │  Agent B      │   │  Agent C      │
 │  "Sherlock"   │   │  "DevOps"     │   │  "Researcher" │
-│  hermit/base  │   │ hermit/python │   │ hermit/netsec │
+│ crabshell/base │   │crabshell/python│   │crabshell/netsec│
 │  [HITL: ON]   │   │  [HITL: OFF]  │   │  [HITL: ON]   │
 │  [Workspace]  │   │  [Workspace]  │   │  [Workspace]  │
 │  [Port 8080]  │   │  [Port 8080]  │   │  [Port 8080]  │
@@ -79,7 +79,7 @@ HermitClaw is a **Secure Agentic Operating System**. Each AI agent runs in a Doc
 ## Directory Structure
 
 ```
-hermitclaw/
+crabshell/
 ├── docker-compose.yml    # Docker Compose setup (optional)
 ├── shell/                # Node.js orchestrator
 │   ├── src/
@@ -163,7 +163,7 @@ The dashboard uses a **3-Step Verification Wizard**:
 - Enter agent **Name** (e.g., "Sherlock")
 - Enter **Role** description (e.g., "Security Researcher")
 - Paste your **Telegram Token** (from @BotFather)
-- Select **Docker Image** (hermit/base, hermit/python, or hermit/netsec)
+- Select **Docker Image** (crabshell/base, crabshell/python, or crabshell/netsec)
 - Toggle **HITL** if you want approval for dangerous commands
 
 **Step 2: Verification Handshake**
@@ -208,7 +208,7 @@ Each agent+user pair gets a dedicated workspace:
 
 ### Automatic Cloudflare Tunnel
 
-On startup, HermitClaw automatically creates a public tunnel:
+On startup, CrabShell automatically creates a public tunnel:
 
 - **Zero Configuration**: No need for ngrok or manual port forwarding
 - **Auto-generated URL**: Random `trycloudflare.com` URL (e.g., `https://random-name-1234.trycloudflare.com`)
@@ -375,20 +375,20 @@ Requires operator approval before spawning sub-agent.
 All cubicles are tagged with Docker labels for tracking:
 
 ```yaml
-hermitclaw.agent_id: "1"
-hermitclaw.user_id: "123456789"
-hermitclaw.last_active: "2026-02-20T12:00:00Z"
-hermitclaw.status: "active"
-hermitclaw.created_at: "2026-02-20T10:00:00Z"
+crabshell.agent_id: "1"
+crabshell.user_id: "123456789"
+crabshell.last_active: "2026-02-20T12:00:00Z"
+crabshell.status: "active"
+crabshell.created_at: "2026-02-20T10:00:00Z"
 ```
 
 ## Agent Images
 
 | Image | Tools | Use Case |
 |-------|-------|----------|
-| `hermit/base:latest` | curl, jq, sed, awk, bash | General tasks |
-| `hermit/python:latest` | python3, pandas, numpy | Data analysis |
-| `hermit/netsec:latest` | nmap, dig, openssl | Security research |
+| `crabshell/base:latest` | curl, jq, sed, awk, bash | General tasks |
+| `crabshell/python:latest` | python3, pandas, numpy | Data analysis |
+| `crabshell/netsec:latest` | nmap, dig, openssl | Security research |
 
 ## Configuration
 
@@ -397,8 +397,8 @@ hermitclaw.created_at: "2026-02-20T10:00:00Z"
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | 3000 |
-| `SESSION_SECRET` | Session cookie secret | `hermit-secret-change-in-production` |
-| `WEBHOOK_SECRET` | Telegram webhook secret | `hermit-webhook-secret` |
+| `SESSION_SECRET` | Session cookie secret | `crabshell-secret-change-in-production` |
+| `WEBHOOK_SECRET` | Telegram webhook secret | `crabshell-webhook-secret` |
 | `OPENROUTER_API_KEY` | OpenRouter API key | Required |
 | `OPENAI_API_KEY` | OpenAI API key (optional) | - |
 
@@ -451,6 +451,55 @@ hermitclaw.created_at: "2026-02-20T10:00:00Z"
 
 ## Troubleshooting
 
+### Initial page shows a locked login page instead of setup
+**Issue:** After cleaning and reinstalling the app, the initial page shows a locked login page instead of user credentials setup. How can I log in if I don't have credentials setup yet?
+
+**Reason:** This issue occurs because the CrabShell server detects that an entry already exists in the `admins` table of your database. Even after a "clean reinstall," the persistent data stored in the `data/` directory often survives unless explicitly deleted.
+
+**Solution:** To fix this and trigger the **Initialization Screen** (Setup), follow these steps:
+
+#### 1. Wipe the existing database
+The database file is stored in `data/db/`. You need to delete this file to force the system to return to "Setup Mode."
+
+Run this command from the root of the `crabshell` folder:
+```bash
+rm -rf data/db/*.db
+```
+*(Note: The database file is named `crabshell.db`. Deleting everything in that folder ensures it is gone.)*
+
+#### 2. Restart the Shell server
+Once the database file is deleted, you must restart the Node.js process so it can re-initialize the schema and detect that there are zero admins.
+
+```bash
+cd shell
+npm start
+```
+
+#### 3. Refresh the Dashboard
+Open your browser to: `http://localhost:3000/dashboard/`
+
+You should now see the **"INITIALIZE SYSTEM"** screen with the **"First Time Setup"** notice, allowing you to create your admin username, password, and Operator ID.
+
+---
+
+**Why did this happen?**
+In your `shell/src/server.ts` file, the logic that decides which screen to show is:
+```typescript
+const adminCount = await getAdminCount();
+if (adminCount === 0) {
+    return { status: 'setup_required' }; // Shows the Registration page
+}
+```
+If you didn't delete the `data/` folder during your "clean reinstall," the old `crabshell.db` file was still there. Since that file contained your old admin account, the system skipped setup and went straight to the login (Locked) screen.
+
+**Troubleshooting persistence (Docker)**
+If you are running CrabShell via **Docker Compose**, the data is likely trapped in a Docker Volume. To truly wipe it, run:
+```bash
+docker-compose down -v
+```
+The `-v` flag deletes the volumes associated with the containers, ensuring the database is actually destroyed.
+
+
 ### Docker permission denied
 ```bash
 sudo usermod -aG docker $USER
@@ -464,7 +513,7 @@ sudo apt install build-essential python3 pkg-config libssl-dev
 
 ### Database issues
 ```bash
-rm -rf data/db/hermit.db
+rm -rf data/db/crabshell.db
 ```
 
 ### Find your Telegram User ID
@@ -485,7 +534,7 @@ Send `/start` to @userinfobot on Telegram
 
 ### Container not waking up
 ```bash
-docker ps -a --filter "label=hermitclaw.agent_id"
+docker ps -a --filter "label=crabshell.agent_id"
 ```
 Or use the **Start** button in the Cubicles dashboard tab.
 

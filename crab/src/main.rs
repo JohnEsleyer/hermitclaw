@@ -95,7 +95,7 @@ fn ensure_workspace_dir() {
             if let Err(e) = env::set_current_dir(WORKSPACE_DIR) {
                 eprintln!("Warning: Could not change to workspace directory: {}", e);
             } else {
-                println!("[Workspace] Working directory set to {}", WORKSPACE_DIR);
+                eprintln!("[Workspace] Working directory set to {}", WORKSPACE_DIR);
             }
         }
     }
@@ -136,7 +136,7 @@ fn chrono_timestamp() -> String {
 }
 
 fn main() {
-    let agent_name = env::var("AGENT_NAME").unwrap_or_else(|_| "HermitClaw".to_string());
+    let agent_name = env::var("AGENT_NAME").unwrap_or_else(|_| "CrabShell".to_string());
     let agent_role = env::var("AGENT_ROLE").unwrap_or_else(|_| "General Assistant".to_string());
     let docker_image = env::var("DOCKER_IMAGE").unwrap_or_else(|_| "hermit/base".to_string());
     let user_msg = env::var("USER_MSG").unwrap_or_default();

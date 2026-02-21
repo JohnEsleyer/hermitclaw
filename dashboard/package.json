@@ -1,7 +1,7 @@
 {
-  "name": "hermitclaw-dashboard",
+  "name": "crabshell-dashboard",
   "version": "1.0.0",
-  "description": "Web Dashboard for HermitClaw",
+  "description": "Web Dashboard for CrabShell",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",

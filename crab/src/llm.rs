@@ -160,8 +160,8 @@ impl LLMClient {
 
         if self.provider == "openrouter" {
             request = request
-                .header("HTTP-Referer", "https://hermitclaw.local")
-                .header("X-Title", "HermitClaw");
+                .header("HTTP-Referer", "https://crabshell.local")
+                .header("X-Title", "CrabShell");
         }
 
         let response = request

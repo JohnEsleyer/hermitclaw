@@ -14,8 +14,8 @@ import * as http from 'http';
 import cookie from '@fastify/cookie';
 
 const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'hermit-secret-change-in-production';
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'hermit-webhook-secret';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'crabshell-secret-change-in-production';
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'crabshell-webhook-secret';
 
 const pendingVerifications = new Map<string, { code: string; timestamp: number }>();
 
@@ -47,7 +47,7 @@ export async function startServer() {
 
         if (request.url.startsWith('/api/auth')) return;
 
-        const token = request.cookies.hermit_session;
+        const token = request.cookies.crabshell_session;
         if (!token) {
             reply.code(401).send({ error: 'Unauthorized' });
             return;
@@ -61,7 +61,7 @@ export async function startServer() {
         }
         
         const operator = await getOperator();
-        const token = request.cookies.hermit_session;
+        const token = request.cookies.crabshell_session;
         if (token) {
             return { status: 'authenticated', hasOperator: !!operator };
         }
@@ -96,7 +96,7 @@ export async function startServer() {
 
         const token = generateSessionToken(admin.id);
         
-        reply.setCookie('hermit_session', token, {
+        reply.setCookie('crabshell_session', token, {
             path: '/',
             httpOnly: true,
             secure: false,
@@ -108,7 +108,7 @@ export async function startServer() {
     });
 
     fastify.post('/api/auth/logout', async (request: any, reply: any) => {
-        reply.clearCookie('hermit_session');
+        reply.clearCookie('crabshell_session');
         return { success: true };
     });
 
@@ -605,6 +605,22 @@ export async function startServer() {
         return reply.sendFile(filePath, workspacePath);
     });
 
+    fastify.get('/api/agents/:id/runtime-logs/:userId', async (request: any, reply: any) => {
+        const { id, userId } = request.params;
+        const logPath = path.join(WORKSPACE_DIR, `${id}_${userId}`, '.hermit.log');
+        
+        if (!fs.existsSync(logPath)) {
+            return { logs: "No logs found yet. Send a message to the agent first!" };
+        }
+        
+        try {
+            const content = fs.readFileSync(logPath, 'utf-8');
+            return { logs: content.slice(-5000) };
+        } catch (e: any) {
+            return { logs: `Error reading logs: ${e.message}` };
+        }
+    });
+
     fastify.get('/preview/:agentId/:port/*', async (request: any, reply: any) => {
         const { agentId, port } = request.params;
         const targetPath = request.params['*'] || '';
@@ -615,7 +631,7 @@ export async function startServer() {
         }
         
         const containers = await listContainers();
-        const target = containers.find((c: any) => c.Labels?.['hermitclaw.agent_id'] === String(agentId));
+        const target = containers.find((c: any) => c.Labels?.['crabshell.agent_id'] === String(agentId));
         
         if (!target || target.State !== 'running') {
             return reply.code(404).send({ error: 'Agent container not running' });
@@ -666,7 +682,7 @@ export async function startServer() {
         }
         
         const containers = await listContainers();
-        const target = containers.find((c: any) => c.Labels?.['hermitclaw.agent_id'] === String(agentId));
+        const target = containers.find((c: any) => c.Labels?.['crabshell.agent_id'] === String(agentId));
         
         if (!target || target.State !== 'running') {
             return reply.code(404).send({ error: 'Agent container not running' });
@@ -714,13 +730,18 @@ export async function startServer() {
     fastify.register(require('@fastify/static'), {
         root: path.join(__dirname, '../dashboard/dist'),
         prefix: '/dashboard/',
+        setHeaders: (res: any) => {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
     });
 
     fastify.get('/dashboard', async (_request: any, reply: any) => {
+        reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
         return reply.sendFile('index.html');
     });
 
     fastify.get('/dashboard/', async (_request: any, reply: any) => {
+        reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
         return reply.sendFile('index.html');
     });
 

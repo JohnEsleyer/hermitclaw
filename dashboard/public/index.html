@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HermitClaw Dashboard</title>
+    <title>CrabShell Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
@@ -112,18 +112,27 @@
                         <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
                     </svg>
                 </div>
-                <h1 class="text-3xl font-bold tracking-tight text-white mb-2">HermitClaw</h1>
+                <h1 class="text-3xl font-bold tracking-tight text-white mb-2">CrabShell</h1>
                 <p id="auth-title" class="text-orange-500 font-mono text-sm">SYSTEM_LOCKED</p>
             </div>
 
             <form id="auth-form" class="space-y-4" onsubmit="handleAuth(event)">
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">OPERATOR_ID</label>
-                    <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required autocomplete="off">
+                <div id="setup-notice" class="hidden bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300 mb-2">
+                    <strong>First Time Setup</strong><br>
+                    Create your admin credentials to get started.
                 </div>
                 <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">ACCESS_KEY</label>
-                    <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">ADMIN USERNAME</label>
+                    <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required autocomplete="off" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">ADMIN PASSWORD</label>
+                    <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required placeholder="••••••••">
+                </div>
+                <div id="operator-field" class="hidden">
+                    <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM USER ID (optional)</label>
+                    <input type="text" id="operator-id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" placeholder="e.g., 123456789">
+                    <p class="text-xs text-slate-500 mt-1">Send /start to <a href="https://t.me/userinfobot" target="_blank" class="text-orange-400 hover:underline">@userinfobot</a> to get your ID</p>
                 </div>
                 
                 <div id="auth-error" class="text-red-400 text-xs font-mono hidden text-center"></div>
@@ -142,7 +151,7 @@
                 <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
                     <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20Z"/>
                 </svg>
-                <h1 class="font-bold tracking-tight text-lg text-white">HermitClaw</h1>
+                <h1 class="font-bold tracking-tight text-lg text-white">CrabShell</h1>
             </div>
 
             <nav class="flex-1 p-4 space-y-2">
@@ -369,7 +378,7 @@
                     <div class="w-3 h-3 rounded-full bg-red-500"></div>
                     <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
                     <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span id="term-title" class="ml-2 text-slate-400">root@hermitclaw:~</span>
+                    <span id="term-title" class="ml-2 text-slate-400">root@crabshell:~</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="attachTerminal()" class="text-orange-500 hover:text-white text-sm" title="Attach to container">
@@ -394,7 +403,7 @@
             </div>
             <div class="p-6 space-y-6 text-slate-300">
                 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to send messages to your HermitClaw server instead of your bot polling for updates. It's the standard way to receive messages in production.</p>
+                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to send messages to your CrabShell server instead of your bot polling for updates. It's the standard way to receive messages in production.</p>
                 </div>
 
                 <div>
@@ -403,8 +412,8 @@
                     <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm text-green-400">
 # Using Cloudflare Tunnel (recommended)<br>
 curl -sL https://run.cloudflare.com/ | sh<br>
-cloudflared tunnel create hermitclaw<br>
-cloudflared tunnel url hermitclaw
+cloudflared tunnel create crabshell<br>
+cloudflared tunnel url crabshell
                     </div>
                     <p class="text-xs text-slate-500 mt-2">Or use <a href="https://ngrok.com" target="_blank" class="text-orange-400 hover:underline">ngrok</a>: <code class="bg-slate-800 px-1 rounded">ngrok http 3000</code></p>
                 </div>
@@ -473,23 +482,31 @@ cloudflared tunnel url hermitclaw
                 if (data.status === 'authenticated') {
                     showDashboard();
                 } else if (data.status === 'setup_required') {
-                    showAuthScreen('INITIALIZE SYSTEM', 'Create Admin Account');
+                    showAuthScreen('INITIALIZE SYSTEM', 'Create Admin Account', true);
                     authState = 'setup_required';
                 } else {
-                    showAuthScreen('SYSTEM LOCKED', 'Authenticate');
+                    showAuthScreen('SYSTEM LOCKED', 'Authenticate', false);
                     authState = 'login_required';
                 }
             } catch (e) {
                 console.error("Auth check failed", e);
-                showAuthScreen('SYSTEM ERROR', 'Retry');
+                showAuthScreen('SYSTEM ERROR', 'Retry', false);
             }
         }
 
-        function showAuthScreen(title, btnText) {
+        function showAuthScreen(title, btnText, isSetup = false) {
             document.getElementById('auth-screen').classList.remove('hidden');
             document.getElementById('dashboard-ui').classList.add('hidden');
             document.getElementById('auth-title').innerText = title;
             document.getElementById('auth-btn').innerText = btnText;
+            
+            if (isSetup) {
+                document.getElementById('setup-notice').classList.remove('hidden');
+                document.getElementById('operator-field').classList.remove('hidden');
+            } else {
+                document.getElementById('setup-notice').classList.add('hidden');
+                document.getElementById('operator-field').classList.add('hidden');
+            }
         }
 
         function showDashboard() {
@@ -537,10 +554,16 @@ cloudflared tunnel url hermitclaw
             const endpoint = authState === 'setup_required' ? '/api/auth/setup' : '/api/auth/login';
 
             try {
+                let body = { username, password };
+                if (authState === 'setup_required') {
+                    const operatorId = document.getElementById('operator-id').value;
+                    if (operatorId) body.operator_telegram_id = operatorId;
+                }
+
                 const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(body)
                 });
                 
                 const data = await res.json();
@@ -711,7 +734,7 @@ cloudflared tunnel url hermitclaw
 
         async function openTerminal(id, name) {
             currentAgentId = id;
-            document.getElementById('term-title').innerText = `ssh ${name.toLowerCase()}@hermitclaw`;
+            document.getElementById('term-title').innerText = `ssh ${name.toLowerCase()}@crabshell`;
             document.getElementById('terminal-modal').classList.remove('hidden');
 
             if (!term) {
@@ -730,7 +753,7 @@ cloudflared tunnel url hermitclaw
                 term.open(document.getElementById('xterm-container'));
                 fitAddon.fit();
 
-                term.writeln('\x1b[38;5;208mHERMITCLAW v1.0.0 - Secure Shell Connection Established.\x1b[0m');
+                term.writeln('\x1b[38;5;208mCRABSHELL v1.0.0 - Secure Shell Connection Established.\x1b[0m');
                 term.writeln('\x1b[90mClick "Link" button to attach to a running container\x1b[0m');
             }
         }
