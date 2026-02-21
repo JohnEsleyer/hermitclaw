@@ -17,7 +17,9 @@
     "dockerode": "^4.0.0",
     "dotenv": "^16.4.0",
     "fastify": "^4.28.0",
-    "grammy": "^1.19.0"
+    "grammy": "^1.19.0",
+    "@google/genai": "^0.14.1",
+    "@openrouter/sdk": "^1.0.0"
   },
   "devDependencies": {
     "@types/dockerode": "^3.3.23",

@@ -104,6 +104,9 @@
 
         .agent-avatar { width: 42px; height: 42px; border-radius: 9999px; object-fit: cover; border: 2px solid rgba(251,146,60,.6); background:#1e293b; }
         .agent-avatar-mini { width: 20px; height: 20px; border-radius: 9999px; object-fit: cover; border: 1px solid rgba(251,146,60,.7); background:#1e293b; }
+        .tele-chat-bg { background: radial-gradient(circle at top right, rgba(251,146,60,.12), transparent 35%), radial-gradient(circle at bottom left, rgba(14,165,233,.08), transparent 35%), #0b1220; }
+        .chat-bubble-user { background: linear-gradient(135deg, rgba(249,115,22,.95), rgba(234,88,12,.9)); border-radius: 18px 18px 6px 18px; }
+        .chat-bubble-agent { background: rgba(30,41,59,.9); border: 1px solid rgba(148,163,184,.2); border-radius: 18px 18px 18px 6px; }
     </style>
 </head>
 <body class="h-screen flex text-slate-200">
@@ -296,18 +299,10 @@
                     <div class="glass-card p-5 rounded-2xl mb-6">
                         <div class="flex items-center justify-between gap-3 mb-3">
                             <h4 class="text-white font-bold">In-App Agent Chat</h4>
-                            <span class="text-xs text-slate-400">Debug Telegram response issues directly from dashboard</span>
+                            <span class="text-xs text-slate-400">Use the chat icon in any agent card to open a Telegram-style modal chat.</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <select id="chat-agent" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
-                            <input id="chat-user-id" type="number" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="User ID (optional)">
-                            <input id="chat-message" class="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="Ask the selected agent..."></input>
-                        </div>
-                        <div class="mt-3 flex gap-3">
-                            <button onclick="sendDashboardChat()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm">Send</button>
-                            <button onclick="loadRuntimeLogs()" class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm">Refresh Agent Logs</button>
-                        </div>
-                        <div id="chat-output" class="mt-3 text-sm text-slate-300 whitespace-pre-wrap bg-slate-900/60 border border-slate-700 rounded-lg p-3 min-h-[72px]">No messages yet.</div>
+                        <button onclick="loadRuntimeLogs()" class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm">Refresh Agent Logs</button>
+                        <div id="chat-output" class="mt-3 text-sm text-slate-300 whitespace-pre-wrap bg-slate-900/60 border border-slate-700 rounded-lg p-3 min-h-[72px]">No runtime logs yet.</div>
                     </div>
 
                     <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -751,6 +746,11 @@
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE PICTURE URL</label>
                     <input type="text" id="new-profile-picture" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="https://...">
+                    <div class="mt-2 flex items-center gap-3">
+                        <input type="file" id="new-profile-picture-file" accept="image/*" class="hidden" onchange="uploadProfilePicture(event)">
+                        <button type="button" onclick="document.getElementById('new-profile-picture-file').click()" class="bg-slate-800 border border-slate-700 text-white px-3 py-2 rounded-lg text-xs">Upload image</button>
+                        <img id="new-profile-picture-preview" class="agent-avatar hidden" alt="Profile preview">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE BIO</label>
@@ -1138,6 +1138,31 @@ cloudflared tunnel url hermitshell
         </div>
     </div>
 
+
+    <!-- Agent Chat Modal -->
+    <div id="agent-chat-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="tele-chat-bg border border-slate-700 w-full max-w-2xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-700/80 bg-slate-900/70 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="agent-chat-avatar" class="agent-avatar" alt="Agent avatar">
+                    <div>
+                        <h3 id="agent-chat-title" class="text-lg font-bold text-white">Agent Chat</h3>
+                        <p class="text-xs text-slate-400">HermitShell secure line</p>
+                    </div>
+                </div>
+                <button onclick="closeAgentChatModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="agent-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            <div class="p-4 border-t border-slate-700/80 bg-slate-900/60">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    <input id="agent-chat-user-id" type="number" class="md:col-span-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="User ID">
+                    <input id="agent-chat-input" class="md:col-span-3 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="Message...">
+                    <button onclick="sendAgentChatMessage()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         let authState = 'loading';
@@ -1149,6 +1174,7 @@ cloudflared tunnel url hermitshell
         let cachedAgents = [];
         let wizardStep = 1;
         let pendingVerificationToken = null;
+        let activeChatAgentId = null;
         window.usingDefaultCreds = false;
 
         const AUTH_TOKEN_KEY = 'hermitshell_session_token';
@@ -1772,17 +1798,84 @@ cloudflared tunnel url hermitshell
             }
         }
 
-        async function sendDashboardChat() {
-            const agentId = document.getElementById('chat-agent').value;
-            const message = document.getElementById('chat-message').value.trim();
-            const userId = document.getElementById('chat-user-id').value || 0;
-            const out = document.getElementById('chat-output');
-            if (!agentId || !message) return;
-            out.innerText = 'Sending...';
-            const res = await fetch(`/api/chat/${agentId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, userId: Number(userId) }) });
-            const data = await res.json();
-            out.innerText = data.output || data.error || 'No response';
-            document.getElementById('chat-message').value = '';
+
+        async function uploadProfilePicture(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('Only image files are allowed.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = String(reader.result || '');
+                if (!dataUrl) return;
+                document.getElementById('new-profile-picture').value = dataUrl;
+                const preview = document.getElementById('new-profile-picture-preview');
+                preview.src = dataUrl;
+                preview.classList.remove('hidden');
+            };
+            reader.onerror = () => alert('Failed to read the selected file.');
+            reader.readAsDataURL(file);
+        }
+
+        function openAgentChat(agentId, agentName) {
+            const agent = cachedAgents.find(a => a.id === agentId) || { id: agentId, name: agentName };
+            activeChatAgentId = agentId;
+            document.getElementById('agent-chat-title').innerText = `${agent.name} · Chat`;
+            document.getElementById('agent-chat-avatar').src = getAgentAvatar(agent);
+            document.getElementById('agent-chat-messages').innerHTML = '';
+            document.getElementById('agent-chat-input').value = '';
+            document.getElementById('agent-chat-modal').classList.remove('hidden');
+            document.getElementById('agent-chat-modal').classList.add('flex');
+            appendAgentChatMessage('agent', '🦀 HermitShell link established. Send a message to begin.');
+            lucide.createIcons();
+        }
+
+        function closeAgentChatModal() {
+            document.getElementById('agent-chat-modal').classList.add('hidden');
+            document.getElementById('agent-chat-modal').classList.remove('flex');
+            activeChatAgentId = null;
+        }
+
+        function appendAgentChatMessage(role, text) {
+            const wrap = document.getElementById('agent-chat-messages');
+            const row = document.createElement('div');
+            row.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `${role === 'user' ? 'chat-bubble-user text-white' : 'chat-bubble-agent text-slate-100'} max-w-[80%] px-4 py-2 text-sm whitespace-pre-wrap`;
+            bubble.innerText = text;
+            row.appendChild(bubble);
+            wrap.appendChild(row);
+            wrap.scrollTop = wrap.scrollHeight;
+        }
+
+        async function sendAgentChatMessage() {
+            const input = document.getElementById('agent-chat-input');
+            const userId = document.getElementById('agent-chat-user-id').value || 0;
+            const message = input.value.trim();
+            if (!activeChatAgentId || !message) return;
+
+            appendAgentChatMessage('user', message);
+            input.value = '';
+            appendAgentChatMessage('agent', 'Typing…');
+
+            try {
+                const res = await fetch(`/api/chat/${activeChatAgentId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, userId: Number(userId) })
+                });
+                const data = await res.json();
+                const messages = document.getElementById('agent-chat-messages');
+                messages.removeChild(messages.lastElementChild);
+                appendAgentChatMessage('agent', data.output || data.error || 'No response');
+            } catch (e) {
+                const messages = document.getElementById('agent-chat-messages');
+                messages.removeChild(messages.lastElementChild);
+                appendAgentChatMessage('agent', 'Failed to send message: ' + e.message);
+            }
         }
 
         async function loadAgents() {
@@ -1825,7 +1918,7 @@ cloudflared tunnel url hermitshell
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-5 gap-2">
+                            <div class="grid grid-cols-6 gap-2">
                                 <button onclick="testAgent(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 py-2 rounded-lg text-xs font-medium transition-colors border border-green-600/30">
                                     <i data-lucide="play" class="w-3 h-3"></i> Test
                                 </button>
@@ -1834,6 +1927,9 @@ cloudflared tunnel url hermitshell
                                 </button>
                                 <button onclick="viewRuntimeLogs(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 py-2 rounded-lg text-xs font-medium transition-colors border border-blue-600/30">
                                     <i data-lucide="file-text" class="w-3 h-3"></i> Logs
+                                </button>
+                                <button onclick="openAgentChat(${agent.id}, '${agent.name}')" class="flex items-center justify-center gap-1 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 py-2 rounded-lg text-xs font-medium transition-colors border border-cyan-600/30">
+                                    <i data-lucide="message-circle" class="w-3 h-3"></i> Chat
                                 </button>
                                 <button onclick="editAgent(${agent.id})" class="flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-xs font-medium transition-colors border border-slate-700">
                                     <i data-lucide="settings" class="w-3 h-3"></i> Cfg
@@ -1846,10 +1942,6 @@ cloudflared tunnel url hermitshell
                     `;
                     grid.innerHTML += card;
                 });
-                const chatAgent = document.getElementById('chat-agent');
-                if (chatAgent) {
-                    chatAgent.innerHTML = agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-                }
                 lucide.createIcons();
                 if (!document.getElementById('section-sites').classList.contains('hidden')) loadSites();
                 if (!document.getElementById('section-files').classList.contains('hidden')) loadFilesSection();
@@ -1998,6 +2090,8 @@ cloudflared tunnel url hermitshell
             document.getElementById('new-image').value = agent.docker_image;
             document.getElementById('new-require-approval').checked = agent.require_approval === 1;
             document.getElementById('new-profile-picture').value = agent.profile_picture_url || '';
+            const preview = document.getElementById('new-profile-picture-preview');
+            if (agent.profile_picture_url) { preview.src = agent.profile_picture_url; preview.classList.remove('hidden'); } else { preview.classList.add('hidden'); }
             document.getElementById('new-profile-bio').value = agent.profile_bio || '';
 
             if (confirm('Edit agent "' + agent.name + '"? Note: To change the token, you will need to re-verify.')) {
@@ -2106,6 +2200,7 @@ cloudflared tunnel url hermitshell
             document.getElementById('new-token').value = '';
             document.getElementById('new-require-approval').checked = false;
             document.getElementById('new-profile-picture').value = '';
+            document.getElementById('new-profile-picture-preview').classList.add('hidden');
             document.getElementById('new-profile-bio').value = '';
             wizardStep = 1;
             pendingVerificationToken = null;
@@ -2541,6 +2636,16 @@ cloudflared tunnel url hermitshell
             await fetch(`/api/files/${agentId}/${userId}/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: file.name, contentBase64 }) });
             loadWorkspaceFiles();
         }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const modalInput = document.getElementById('agent-chat-input');
+            if (modalInput) {
+                modalInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') sendAgentChatMessage();
+                });
+            }
+        });
 
         init();
     </script>

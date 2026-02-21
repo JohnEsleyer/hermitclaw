@@ -406,6 +406,8 @@ export async function startServer() {
         return { success: true };
     });
 
+
+
     fastify.delete('/api/agents/:id', async (request: any) => {
         await deleteAgent(Number(request.params.id));
         return { success: true };
@@ -451,6 +453,62 @@ export async function startServer() {
         if (!agent) return reply.code(404).send({ error: 'Agent not found' });
 
         try {
+            const settings = await getAllSettings();
+            if (settings.default_provider === 'openrouter') {
+                const apiKey = process.env.OPENROUTER_API_KEY || settings.openrouter_api_key;
+                if (!apiKey) {
+                    return reply.code(400).send({ error: 'OpenRouter provider selected but OPENROUTER_API_KEY/openrouter_api_key is missing' });
+                }
+
+                const model = settings.default_model && settings.default_model !== 'auto' ? settings.default_model : 'openrouter/free';
+                const { OpenRouter } = require('@openrouter/sdk');
+                const openrouter = new OpenRouter({ apiKey });
+                const stream = await openrouter.chat.send({
+                    model,
+                    messages: [
+                        { role: 'system', content: `You are ${agent.name}. Role: ${agent.role}.` },
+                        { role: 'user', content: message }
+                    ],
+                    stream: true
+                });
+
+                let output = '';
+                let reasoningTokens = 0;
+                for await (const chunk of stream) {
+                    const content = chunk?.choices?.[0]?.delta?.content;
+                    if (content) output += content;
+                    if (chunk?.usage?.reasoningTokens !== undefined) {
+                        reasoningTokens = Number(chunk.usage.reasoningTokens || 0);
+                    }
+                }
+
+                if (!output.trim()) output = 'No response from OpenRouter model.';
+                const estimatedCost = output.length * 0.00001;
+                await import('./db').then(m => m.updateSpend(agent.id, estimatedCost));
+                await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'OpenRouter chat message processed', { userId: Number(userId || 0), model, reasoningTokens });
+                return { output, provider: 'openrouter', model, reasoningTokens };
+            }
+
+            if (settings.default_provider === 'google') {
+                const model = settings.default_model || 'gemini-3-flash-preview';
+                const apiKey = process.env.GEMINI_API_KEY || settings.google_api_key;
+                if (!apiKey) {
+                    return reply.code(400).send({ error: 'Google provider selected but GEMINI_API_KEY/google_api_key is missing' });
+                }
+
+                const { GoogleGenAI } = require('@google/genai');
+                const ai = new GoogleGenAI({ apiKey });
+                const response = await ai.models.generateContent({
+                    model,
+                    contents: `You are ${agent.name}. Role: ${agent.role}.\n\n${message}`
+                });
+                const output = response.text || 'No response from Gemini model.';
+                const estimatedCost = output.length * 0.00001;
+                await import('./db').then(m => m.updateSpend(agent.id, estimatedCost));
+                await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'Gemini chat message processed', { userId: Number(userId || 0), model });
+                return { output, provider: 'google', model };
+            }
+
             const result = await spawnAgent({
                 agentId: agent.id,
                 agentName: agent.name,
