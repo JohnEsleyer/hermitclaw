@@ -3,7 +3,7 @@ import { spawnAgent, docker, getCubicleStatus, stopCubicle, removeCubicle, listC
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { loadHistory, saveHistory } from './history';
+import { loadHistory, saveHistory, clearHistory } from './history';
 import { setPreviewPassword } from './server';
 
 interface TelegramUpdate {
@@ -297,6 +297,11 @@ To get access, follow these steps:
         return await handleResetCommand(agent, userId);
     }
 
+    if (text === '/clear') {
+        clearHistory(`telegram_${agent.id}_${userId}`);
+        return '🧹 Conversation context cleared. I will respond without previous chat memory.';
+    }
+
     if (text === '/budget') {
         return await handleBudgetCommand(agent);
     }
@@ -363,7 +368,8 @@ export async function processAgentMessage(
         await editMessageText(token, chatId, statusMessageId, `🔄 *${agent.name}* is waking up...`);
     }
 
-    const history = loadHistory(userId);
+    const historyKey = `telegram_${agent.id}_${userId}`;
+    const history = loadHistory(historyKey);
 
     const meetings = await getActiveMeetings(agent.id);
     const meetingContext = meetings.length > 0 
@@ -385,6 +391,8 @@ export async function processAgentMessage(
             maxTokens: 1000,
             requireApproval: agent.require_approval === 1,
             userId: userId,
+            llmProvider: agent.llm_provider && agent.llm_provider !== 'default' ? agent.llm_provider : undefined,
+            llmModel: agent.llm_model && agent.llm_model !== 'default' ? agent.llm_model : undefined,
             onProgress: async (status: string, details?: string) => {
                 if (statusMessageId) {
                     const settings = await import('./db').then(m => m.getAllSettings());
@@ -409,7 +417,7 @@ export async function processAgentMessage(
 
         history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: result.output });
-        saveHistory(userId, history);
+        saveHistory(historyKey, history.slice(-40));
 
         result.output = await detectAndSendFiles(token, chatId, result.output, agent.id, userId);
         
@@ -651,19 +659,21 @@ export async function sendApprovalRequest(
 
 export async function sendTelegramMessage(token: string, chatId: number, text: string): Promise<number | undefined> {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    
-    try {
+
+    const send = async (payload: Record<string, any>) => {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'Markdown'
-            })
+            body: JSON.stringify(payload)
         });
-        
-        const data = await response.json() as { ok: boolean; result?: { message_id: number } };
+        return await response.json() as { ok: boolean; description?: string; result?: { message_id: number } };
+    };
+
+    try {
+        let data = await send({ chat_id: chatId, text, parse_mode: 'Markdown' });
+        if (!data.ok) {
+            data = await send({ chat_id: chatId, text });
+        }
         return data.result?.message_id;
     } catch (err) {
         console.error('Failed to send Telegram message:', err);
@@ -895,6 +905,7 @@ async function handleHelpCommand(agent: any): Promise<string> {
 /workspace - Files in persistent workspace
 /budget - Daily budget remaining
 /reset - Kill and reset cubicle
+/clear - Clear conversation context
 
 *How it works:*
 1. Send any message → I wake up or spawn a container

@@ -25,6 +25,8 @@ interface AgentConfig {
     requireApproval?: boolean;
     userId?: number;
     onProgress?: ProgressCallback;
+    llmProvider?: string;
+    llmModel?: string;
 }
 
 interface SpawnResult {
@@ -98,8 +100,8 @@ async function createNewCubicle(config: AgentConfig): Promise<Docker.Container> 
     if (!fs.existsSync(workspacePath)) fs.mkdirSync(workspacePath, { recursive: true });
 
     const settings = await getAllSettings();
-    const provider = settings.default_provider || 'openrouter';
-    const model = settings.default_model || 'auto';
+    const provider = config.llmProvider || settings.default_provider || 'openrouter';
+    const model = config.llmModel || settings.default_model || 'auto';
 
     const envVars = [
         `AGENT_ID=${config.agentId}`,
@@ -173,7 +175,8 @@ async function createNewCubicle(config: AgentConfig): Promise<Docker.Container> 
 
 export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
     const settings = await getAllSettings();
-    const provider = settings.default_provider || 'openrouter';
+    const provider = config.llmProvider || settings.default_provider || 'openrouter';
+    const model = config.llmModel || settings.default_model || 'auto';
     const providerKeyMap: Record<string, { key: string; env: string }> = {
         'openai': { key: 'openai_api_key', env: 'OPENAI_API_KEY' },
         'anthropic': { key: 'anthropic_api_key', env: 'ANTHROPIC_API_KEY' },
@@ -201,6 +204,8 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
                 `USER_MSG=${config.userMessage}`,
                 `HISTORY=${historyB64}`,
                 `MAX_TOKENS=${config.maxTokens}`,
+                `LLM_PROVIDER=${provider}`,
+                `LLM_MODEL=${model}`,
                 ...((await container.inspect()).Config.Env || [])
             ],
             AttachStdout: true,

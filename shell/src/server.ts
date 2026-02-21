@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as http from 'http';
 import { execFileSync } from 'child_process';
 import cookie from '@fastify/cookie';
+import { loadHistory, saveHistory, clearHistory } from './history';
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'hermitshell-secret-change-in-production';
@@ -352,7 +353,9 @@ export async function startServer() {
                 is_active: agentData.is_active !== undefined ? agentData.is_active : 1,
                 require_approval: agentData.require_approval || 0,
                 profile_picture_url: agentData.profile_picture_url || '',
-                profile_bio: agentData.profile_bio || ''
+                profile_bio: agentData.profile_bio || '',
+                llm_provider: agentData.llm_provider || 'default',
+                llm_model: agentData.llm_model || 'default'
             });
             
             const settings = await getAllSettings();
@@ -368,7 +371,7 @@ export async function startServer() {
     });
 
     fastify.post('/api/agents', async (request: any) => {
-        const { name, role, telegram_token, docker_image, system_prompt, is_active, require_approval, profile_picture_url, profile_bio } = request.body;
+        const { name, role, telegram_token, docker_image, system_prompt, is_active, require_approval, profile_picture_url, profile_bio, llm_provider, llm_model } = request.body;
         const id = await createAgent({
             name,
             role: role || '',
@@ -378,14 +381,16 @@ export async function startServer() {
             is_active: is_active !== undefined ? is_active : 1,
             require_approval: require_approval || 0,
             profile_picture_url: profile_picture_url || '',
-            profile_bio: profile_bio || ''
+            profile_bio: profile_bio || '',
+            llm_provider: llm_provider || 'default',
+            llm_model: llm_model || 'default'
         });
         return { id, success: true };
     });
 
     fastify.put('/api/agents/:id', async (request: any) => {
         const id = Number(request.params.id);
-        const { name, role, telegram_token, docker_image, system_prompt, is_active, daily_limit_usd, require_approval, profile_picture_url, profile_bio } = request.body;
+        const { name, role, telegram_token, docker_image, system_prompt, is_active, daily_limit_usd, require_approval, profile_picture_url, profile_bio, llm_provider, llm_model } = request.body;
         
         await updateAgent(id, { 
             name, 
@@ -396,7 +401,9 @@ export async function startServer() {
             is_active,
             require_approval,
             profile_picture_url,
-            profile_bio
+            profile_bio,
+            llm_provider,
+            llm_model
         });
         
         if (daily_limit_usd !== undefined) {
@@ -452,84 +459,59 @@ export async function startServer() {
         const agent = await getAgentById(agentId);
         if (!agent) return reply.code(404).send({ error: 'Agent not found' });
 
+        const scopedUserId = Number(userId || 0);
+        const historyKey = `dashboard_${agent.id}_${scopedUserId}`;
+
         try {
-            const settings = await getAllSettings();
-            if (settings.default_provider === 'openrouter') {
-                const apiKey = process.env.OPENROUTER_API_KEY || settings.openrouter_api_key;
-                if (!apiKey) {
-                    return reply.code(400).send({ error: 'OpenRouter provider selected but OPENROUTER_API_KEY/openrouter_api_key is missing' });
-                }
-
-                const model = settings.default_model && settings.default_model !== 'auto' ? settings.default_model : 'openrouter/free';
-                const { OpenRouter } = require('@openrouter/sdk');
-                const openrouter = new OpenRouter({ apiKey });
-                const stream = await openrouter.chat.send({
-                    model,
-                    messages: [
-                        { role: 'system', content: `You are ${agent.name}. Role: ${agent.role}.` },
-                        { role: 'user', content: message }
-                    ],
-                    stream: true
-                });
-
-                let output = '';
-                let reasoningTokens = 0;
-                for await (const chunk of stream) {
-                    const content = chunk?.choices?.[0]?.delta?.content;
-                    if (content) output += content;
-                    if (chunk?.usage?.reasoningTokens !== undefined) {
-                        reasoningTokens = Number(chunk.usage.reasoningTokens || 0);
-                    }
-                }
-
-                if (!output.trim()) output = 'No response from OpenRouter model.';
-                const estimatedCost = output.length * 0.00001;
-                await import('./db').then(m => m.updateSpend(agent.id, estimatedCost));
-                await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'OpenRouter chat message processed', { userId: Number(userId || 0), model, reasoningTokens });
-                return { output, provider: 'openrouter', model, reasoningTokens };
-            }
-
-            if (settings.default_provider === 'google') {
-                const model = settings.default_model || 'gemini-3-flash-preview';
-                const apiKey = process.env.GEMINI_API_KEY || settings.google_api_key;
-                if (!apiKey) {
-                    return reply.code(400).send({ error: 'Google provider selected but GEMINI_API_KEY/google_api_key is missing' });
-                }
-
-                const { GoogleGenAI } = require('@google/genai');
-                const ai = new GoogleGenAI({ apiKey });
-                const response = await ai.models.generateContent({
-                    model,
-                    contents: `You are ${agent.name}. Role: ${agent.role}.\n\n${message}`
-                });
-                const output = response.text || 'No response from Gemini model.';
-                const estimatedCost = output.length * 0.00001;
-                await import('./db').then(m => m.updateSpend(agent.id, estimatedCost));
-                await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'Gemini chat message processed', { userId: Number(userId || 0), model });
-                return { output, provider: 'google', model };
-            }
-
+            const history = loadHistory(historyKey);
             const result = await spawnAgent({
                 agentId: agent.id,
                 agentName: agent.name,
                 agentRole: agent.role,
                 dockerImage: agent.docker_image,
                 userMessage: message,
-                history: [],
+                history: history.slice(-20),
                 maxTokens: 1000,
                 requireApproval: agent.require_approval === 1,
-                userId: Number(userId || 0)
+                userId: scopedUserId,
+                llmProvider: agent.llm_provider && agent.llm_provider !== 'default' ? agent.llm_provider : undefined,
+                llmModel: agent.llm_model && agent.llm_model !== 'default' ? agent.llm_model : undefined
             });
+
+            history.push({ role: 'user', content: message });
+            history.push({ role: 'assistant', content: result.output });
+            saveHistory(historyKey, history.slice(-40));
 
             const estimatedCost = result.output.length * 0.00001;
             await import('./db').then(m => m.updateSpend(agent.id, estimatedCost));
-            await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'Chat message processed', { userId: Number(userId || 0) });
+            await createAgentRuntimeLog(agent.id, 'info', 'dashboard-chat', 'Chat message processed', { userId: scopedUserId });
 
             return { output: result.output, containerId: result.containerId };
         } catch (e: any) {
-            await createAgentRuntimeLog(agent.id, 'error', 'dashboard-chat', e.message || 'Chat failed', { userId: Number(userId || 0) });
+            await createAgentRuntimeLog(agent.id, 'error', 'dashboard-chat', e.message || 'Chat failed', { userId: scopedUserId });
             return reply.code(500).send({ error: e.message });
         }
+    });
+
+    fastify.get('/api/chat/:agentId/history/:userId', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const userId = Number(request.params.userId || 0);
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+
+        const historyKey = `dashboard_${agent.id}_${userId}`;
+        return { history: loadHistory(historyKey).slice(-40) };
+    });
+
+    fastify.post('/api/chat/:agentId/clear', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const { userId } = request.body || {};
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+
+        const historyKey = `dashboard_${agent.id}_${Number(userId || 0)}`;
+        clearHistory(historyKey);
+        return { success: true };
     });
 
     fastify.get('/webhook/:token', async (_request: any, _reply: any) => {

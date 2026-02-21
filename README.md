@@ -20,12 +20,15 @@ HermitShell is a **Secure Agentic Operating System**. Each AI agent runs in a Do
 - **Operator Auto-Allowlist**: Setting Operator ID automatically adds you to the allowlist
 - **API Key Validation**: Dashboard blocks agent creation if API keys are missing
 - **Per-Agent Budgeting**: Track and limit spending for each agent individually
+- **Per-Agent LLM Selection**: Choose provider/model per agent (or inherit global defaults)
+- **Persistent Chat Context**: Dashboard and Telegram keep context with explicit clear controls (`Clear` button and `/clear`)
 - **Human-in-the-Loop (HITL)**: Require approval before executing dangerous commands
 - **Delegation HITL**: Agent collaboration requires operator approval
 - **Async Telegram Processing**: Instant responses with background processing and status updates
 - **Audit Logs**: Complete searchable history of all agent commands
 - **Web Terminal**: Attach to running agent containers via xterm.js
 - **Web Dashboard**: Manage agents, users, and settings via a built-in GUI
+- **Improved Agent Cards**: Less crowded cards with better action button fit and readability
 - **File Browser**: Browse and download agent workspace files from dashboard
 - **Manual Container Controls**: Start/Stop/Delete containers from the dashboard
 - **Container Labels**: Track cubicles with `hermitshell.*` Docker labels
@@ -188,6 +191,7 @@ The dashboard uses a **3-Step Verification Wizard**:
 - Enter **Role** description (e.g., "Security Researcher")
 - Paste your **Telegram Token** (from @BotFather)
 - Select **Docker Image** (hermitshell/base, hermitshell/python, or hermitshell/netsec)
+- Select **LLM Provider/Model** for this agent (or keep `default` to inherit global settings)
 - Toggle **HITL** if you want approval for dangerous commands
 
 **Step 2: Verification Handshake**
@@ -201,6 +205,7 @@ The dashboard uses a **3-Step Verification Wizard**:
 
 **Step 4: Start the Bot**
 - Go to your bot on Telegram and send `/start`
+- Use `/clear` any time to explicitly reset the conversation context for that user+agent chat
 
 > **Why verification?** This ensures your bot token is valid. The webhook is automatically registered so Telegram can send messages to your bot.
 
