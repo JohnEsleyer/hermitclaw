@@ -114,31 +114,16 @@
         <div class="glass-card p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
             <div class="mb-8 text-center">
                 <div class="relative w-32 h-32 mx-auto mb-6">
-                    <svg id="auth-mascot" viewBox="0 0 200 200" class="w-full h-full drop-shadow-[0_0_20px_rgba(255,107,53,0.5)] crab-float">
+                    <svg id="auth-mascot" viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_20px_rgba(255,107,53,0.5)] crab-float">
                         <defs>
-                            <linearGradient id="shellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <radialGradient id="authCrabBg" cx="50%" cy="50%" r="55%">
                                 <stop offset="0%" style="stop-color:#1e293b"/>
                                 <stop offset="100%" style="stop-color:#0f172a"/>
-                            </linearGradient>
-                            <linearGradient id="crabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#ff6b35"/>
-                                <stop offset="100%" style="stop-color:#ea580c"/>
-                            </linearGradient>
-                            <filter id="glow">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                            </filter>
+                            </radialGradient>
                         </defs>
-                        <polygon points="100,10 180,50 180,150 100,190 20,150 20,50" fill="url(#shellGrad)" stroke="#ff6b35" stroke-width="4"/>
-                        <polygon points="100,35 155,65 155,135 100,165 45,135 45,65" fill="#1e293b" stroke="#f97316" stroke-width="2"/>
-                        <path d="M100 35 L100 165 M45 65 L155 135 M45 135 L155 65" stroke="#ea580c" stroke-width="1" opacity="0.5"/>
-                        <path d="M100 100 C 70 80, 50 100, 60 130 C 70 120, 80 125, 85 110" fill="none" stroke="url(#crabGrad)" stroke-width="6" stroke-linecap="round"/>
-                        <path d="M100 100 C 130 80, 150 100, 140 130 C 130 120, 120 125, 115 110" fill="none" stroke="url(#crabGrad)" stroke-width="6" stroke-linecap="round"/>
-                        <circle cx="100" cy="100" r="14" fill="url(#crabGrad)" filter="url(#glow)"/>
-                        <circle cx="100" cy="100" r="5" fill="#fff"/>
+                        <circle cx="50" cy="50" r="46" fill="url(#authCrabBg)" stroke="#fb923c" stroke-width="2" opacity="0.95"/>
+                        <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z" fill="#ff6b35"/>
+                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
                     </svg>
                 </div>
                 <h1 class="text-3xl font-bold tracking-tight text-white mb-2 gradient-text">CrabShell</h1>
@@ -199,6 +184,14 @@
                 <a href="#" onclick="showSection('cubicles')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="box" class="w-5 h-5"></i>
                     <span>Cubicles</span>
+                </a>
+                <a href="#" onclick="showSection('sites')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="globe" class="w-5 h-5"></i>
+                    <span>Sites</span>
+                </a>
+                <a href="#" onclick="showSection('files')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="folder-open" class="w-5 h-5"></i>
+                    <span>Files</span>
                 </a>
                 <a href="#" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="file-text" class="w-5 h-5"></i>
@@ -337,6 +330,44 @@
                             <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
                             <p>No running cubicles. Spawn an agent to create a cubicle.</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Sites Section -->
+                <div id="section-sites" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="globe" class="w-5 h-5 text-orange-500"></i>
+                            Sites (Deploy on Demand)
+                        </h3>
+                        <button onclick="loadSites()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl mb-5 text-sm text-slate-300">
+                        <p class="mb-2">Agents can build HTML/web apps inside their cubicle, run a local server, and share a public preview link when needed. Deployments are ephemeral and can be started/stopped on demand.</p>
+                        <p class="text-xs text-slate-400">Tip: use Terminal to run <span class="mono text-orange-300">python3 -m http.server 8080</span>, then share the generated preview URL to Telegram.</p>
+                    </div>
+                    <div id="sites-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Files Section -->
+                <div id="section-files" class="hidden">
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="folder-open" class="w-5 h-5 text-orange-500"></i>
+                        Files & Workspace Browser
+                    </h3>
+                    <div class="glass-card p-5 rounded-2xl mb-5">
+                        <div class="grid md:grid-cols-3 gap-3">
+                            <select id="files-agent" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
+                            <select id="files-user" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
+                            <button onclick="loadWorkspaceFiles()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">Load Workspace</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-3">This makes it easier to review what an agent created before forwarding outputs in Telegram.</p>
+                    </div>
+                    <div id="files-browser" class="glass-card rounded-2xl p-5 text-sm text-slate-300">
+                        Select an agent and user, then click <strong>Load Workspace</strong>.
                     </div>
                 </div>
 
@@ -1075,6 +1106,7 @@ cloudflared tunnel url crabshell
         let term = null;
         let fitAddon = null;
         let ws = null;
+        let cachedAgents = [];
         let wizardStep = 1;
         let pendingVerificationToken = null;
         window.usingDefaultCreds = false;
@@ -1198,6 +1230,8 @@ cloudflared tunnel url crabshell
             document.getElementById('section-metrics').classList.add('hidden');
             document.getElementById('section-allowlist').classList.add('hidden');
             document.getElementById('section-cubicles').classList.add('hidden');
+            document.getElementById('section-sites').classList.add('hidden');
+            document.getElementById('section-files').classList.add('hidden');
             document.getElementById('section-' + section).classList.remove('hidden');
 
             const titles = {
@@ -1206,7 +1240,9 @@ cloudflared tunnel url crabshell
                 'audit': 'Audit Logs',
                 'settings': 'Settings',
                 'metrics': 'System Metrics',
-                'allowlist': 'User Allowlist'
+                'allowlist': 'User Allowlist',
+                'sites': 'Sites',
+                'files': 'Files'
             };
             document.getElementById('page-title').innerText = titles[section] || 'Mission Control';
 
@@ -1215,6 +1251,8 @@ cloudflared tunnel url crabshell
             if (section === 'allowlist') loadAllowlist();
             if (section === 'settings') loadSettings();
             if (section === 'cubicles') loadCubicles();
+            if (section === 'sites') loadSites();
+            if (section === 'files') loadFilesSection();
         }
 
         const PROVIDER_MODELS = {
@@ -1683,6 +1721,7 @@ cloudflared tunnel url crabshell
                 const res = await fetch('/api/agents');
                 if(res.status === 401) return logout();
                 const agents = await res.json();
+                cachedAgents = agents;
                 const grid = document.getElementById('agent-grid');
                 grid.innerHTML = '';
 
@@ -1744,7 +1783,105 @@ cloudflared tunnel url crabshell
                     grid.innerHTML += card;
                 });
                 lucide.createIcons();
+                if (!document.getElementById('section-sites').classList.contains('hidden')) loadSites();
+                if (!document.getElementById('section-files').classList.contains('hidden')) loadFilesSection();
             } catch(e) {}
+        }
+
+        function flattenWorkspace(items = [], depth = 0) {
+            const rows = [];
+            items.forEach(item => {
+                rows.push({ ...item, depth });
+                if (item.type === 'directory' && Array.isArray(item.children)) {
+                    rows.push(...flattenWorkspace(item.children, depth + 1));
+                }
+            });
+            return rows;
+        }
+
+        async function loadSites() {
+            const grid = document.getElementById('sites-grid');
+            if (!grid) return;
+            try {
+                if (!cachedAgents.length) {
+                    const res = await fetch('/api/agents');
+                    cachedAgents = await res.json();
+                }
+                const settings = await fetch('/api/settings').then(r => r.json());
+                const baseUrl = settings.public_url || window.location.origin;
+                if (!cachedAgents.length) {
+                    grid.innerHTML = '<div class="text-slate-500">No agents yet. Spawn an agent first.</div>';
+                    return;
+                }
+                grid.innerHTML = cachedAgents.map(agent => `
+                    <div class="glass-card rounded-2xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-white">${agent.name}</h4>
+                            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">${agent.docker_image.split(':')[0]}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-3">Created by <span class="text-orange-300">${agent.name}</span> • port 8080 preview</p>
+                        <div class="bg-slate-900/70 border border-slate-700 rounded-lg p-2 text-xs mono text-orange-300 break-all mb-3">${baseUrl}/preview/${agent.id}/8080/</div>
+                        <div class="flex gap-2">
+                            <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs py-2 rounded">Open Cubicle</button>
+                            <button onclick="navigator.clipboard.writeText('${baseUrl}/preview/${agent.id}/8080/')" class="flex-1 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/30 text-orange-300 text-xs py-2 rounded">Copy URL</button>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                grid.innerHTML = '<div class="text-red-400">Failed to load sites.</div>';
+            }
+        }
+
+        async function loadFilesSection() {
+            const agentSelect = document.getElementById('files-agent');
+            const userSelect = document.getElementById('files-user');
+            if (!agentSelect || !userSelect) return;
+            try {
+                const [agentsRes, usersRes] = await Promise.all([fetch('/api/agents'), fetch('/api/allowlist')]);
+                const agents = await agentsRes.json();
+                const users = await usersRes.json();
+                cachedAgents = agents;
+                agentSelect.innerHTML = agents.map(a => `<option value="${a.id}">${a.name} (#${a.id})</option>`).join('') || '<option value="">No agents</option>';
+                userSelect.innerHTML = users.map(u => `<option value="${u.user_id}">${u.first_name || u.username || u.user_id} (${u.user_id})</option>`).join('') || '<option value="">No users</option>';
+            } catch (e) {
+                document.getElementById('files-browser').innerHTML = '<span class="text-red-400">Failed to prepare file browser.</span>';
+            }
+        }
+
+        async function loadWorkspaceFiles() {
+            const agentId = document.getElementById('files-agent').value;
+            const userId = document.getElementById('files-user').value;
+            const browser = document.getElementById('files-browser');
+            if (!agentId || !userId) {
+                browser.innerHTML = '<span class="text-yellow-400">Select both agent and user.</span>';
+                return;
+            }
+            browser.innerHTML = '<span class="text-slate-400">Loading workspace...</span>';
+            try {
+                const res = await fetch(`/api/files/${agentId}/${userId}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    browser.innerHTML = `<span class="text-yellow-400">${err.error || 'Workspace not found yet.'}</span>`;
+                    return;
+                }
+                const data = await res.json();
+                const rows = flattenWorkspace(data.files || []);
+                if (!rows.length) {
+                    browser.innerHTML = '<span class="text-slate-400">Workspace is empty.</span>';
+                    return;
+                }
+                browser.innerHTML = rows.map(item => {
+                    const indent = '&nbsp;'.repeat(item.depth * 4);
+                    const icon = item.type === 'directory' ? '📁' : '📄';
+                    const download = item.type === 'file'
+                        ? `<a href="/api/files/${agentId}/${userId}/download/${item.path}" class="text-orange-400 hover:text-orange-300 text-xs ml-2">download</a>`
+                        : '';
+                    return `<div class="py-1 border-b border-slate-800/70 last:border-b-0 mono text-xs">${indent}${icon} ${item.path}${download}</div>`;
+                }).join('');
+            } catch (e) {
+                browser.innerHTML = '<span class="text-red-400">Failed to load workspace files.</span>';
+            }
         }
 
         async function loadAuditLogs() {
