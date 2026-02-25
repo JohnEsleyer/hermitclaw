@@ -235,12 +235,12 @@ export async function initDb(): Promise<void> {
 export async function getAllAgents(): Promise<Agent[]> {
     const db = await getClient();
     const rs = await db.execute('SELECT * FROM agents ORDER BY created_at DESC');
-    
+
     const agents: Agent[] = rs.rows.map(row => {
         const agent: any = { ...row };
         return agent as Agent;
     });
-    
+
     for (const agent of agents) {
         const bRs = await db.execute({
             sql: 'SELECT daily_limit_usd, current_spend_usd FROM budgets WHERE agent_id = ?',
@@ -264,7 +264,7 @@ export async function getAgentByToken(token: string): Promise<Agent | undefined>
         sql: 'SELECT * FROM agents WHERE telegram_token = ? AND is_active = 1',
         args: [token]
     });
-    
+
     if (rs.rows.length > 0) {
         return rs.rows[0] as unknown as Agent;
     }
@@ -277,7 +277,7 @@ export async function getAgentById(id: number): Promise<Agent | undefined> {
         sql: 'SELECT * FROM agents WHERE id = ?',
         args: [id]
     });
-    
+
     if (rs.rows.length > 0) {
         return rs.rows[0] as unknown as Agent;
     }
@@ -286,18 +286,18 @@ export async function getAgentById(id: number): Promise<Agent | undefined> {
 
 export async function createAgent(agent: Omit<Agent, 'id' | 'created_at'>): Promise<number> {
     const db = await getClient();
-    
+
     const rs = await db.execute({
         sql: `INSERT INTO agents (name, role, telegram_token, system_prompt, docker_image, is_active, require_approval, profile_picture_url, profile_bio, llm_provider, llm_model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [agent.name, agent.role, agent.telegram_token, agent.system_prompt, agent.docker_image, agent.is_active, agent.require_approval || 0, agent.profile_picture_url || '', agent.profile_bio || '', agent.llm_provider || 'default', agent.llm_model || 'default']
     });
-    
+
     const lastId = Number(rs.lastInsertRowid);
     await db.execute({
         sql: 'INSERT INTO budgets (agent_id, daily_limit_usd) VALUES (?, 1.00)',
         args: [lastId]
     });
-    
+
     return lastId;
 }
 
@@ -305,7 +305,7 @@ export async function updateAgent(id: number, updates: Partial<Agent>): Promise<
     const db = await getClient();
     const fields: string[] = [];
     const values: any[] = [];
-    
+
     if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
     if (updates.role !== undefined) { fields.push('role = ?'); values.push(updates.role); }
     if (updates.system_prompt !== undefined) { fields.push('system_prompt = ?'); values.push(updates.system_prompt); }
@@ -316,7 +316,7 @@ export async function updateAgent(id: number, updates: Partial<Agent>): Promise<
     if (updates.profile_bio !== undefined) { fields.push('profile_bio = ?'); values.push(updates.profile_bio); }
     if (updates.llm_provider !== undefined) { fields.push('llm_provider = ?'); values.push(updates.llm_provider); }
     if (updates.llm_model !== undefined) { fields.push('llm_model = ?'); values.push(updates.llm_model); }
-    
+
     if (fields.length > 0) {
         values.push(id);
         await db.execute({
@@ -338,15 +338,15 @@ export async function deleteAgent(id: number): Promise<void> {
 export async function getBudget(agentId: number): Promise<Budget | undefined> {
     const db = await getClient();
     const today = new Date().toISOString().split('T')[0];
-    
+
     const rs = await db.execute({
         sql: 'SELECT * FROM budgets WHERE agent_id = ?',
         args: [agentId]
     });
-    
+
     if (rs.rows.length > 0) {
         const budget = rs.rows[0] as unknown as Budget;
-        
+
         if (budget.last_reset_date !== today) {
             await db.execute({
                 sql: 'UPDATE budgets SET current_spend_usd = 0, last_reset_date = ? WHERE agent_id = ?',
@@ -355,7 +355,7 @@ export async function getBudget(agentId: number): Promise<Budget | undefined> {
             budget.current_spend_usd = 0;
             budget.last_reset_date = today;
         }
-        
+
         return budget;
     }
     return undefined;
@@ -489,13 +489,13 @@ export async function createAdmin(username: string, passwordHash: string, salt: 
     });
 }
 
-export async function getAdmin(username: string): Promise<{id: number, username: string, password_hash: string, salt: string} | undefined> {
+export async function getAdmin(username: string): Promise<{ id: number, username: string, password_hash: string, salt: string } | undefined> {
     const db = await getClient();
     const rs = await db.execute({
         sql: "SELECT id, username, password_hash, salt FROM admins WHERE username = ?",
         args: [username]
     });
-    
+
     if (rs.rows.length > 0) {
         const row = rs.rows[0];
         return {
@@ -508,10 +508,10 @@ export async function getAdmin(username: string): Promise<{id: number, username:
     return undefined;
 }
 
-export async function getFirstAdmin(): Promise<{id: number, username: string, password_hash: string, salt: string} | undefined> {
+export async function getFirstAdmin(): Promise<{ id: number, username: string, password_hash: string, salt: string } | undefined> {
     const db = await getClient();
     const rs = await db.execute("SELECT id, username, password_hash, salt FROM admins LIMIT 1");
-    
+
     if (rs.rows.length > 0) {
         const row = rs.rows[0];
         return {
@@ -569,15 +569,15 @@ export async function getAuditLogs(agentId?: number, limit: number = 50): Promis
     const db = await getClient();
     let sql = 'SELECT * FROM audit_logs';
     const args: any[] = [];
-    
+
     if (agentId) {
         sql += ' WHERE agent_id = ?';
         args.push(agentId);
     }
-    
+
     sql += ' ORDER BY created_at DESC LIMIT ?';
     args.push(limit);
-    
+
     const rs = await db.execute({ sql, args });
     return rs.rows as unknown as AuditLog[];
 }
@@ -666,6 +666,14 @@ export async function getAgentMemories(agentId: number, limit: number = 20): Pro
         args: [agentId, limit]
     });
     return rs.rows as unknown as AgentMemory[];
+}
+
+export async function deleteMemory(memoryId: number): Promise<void> {
+    const db = await getClient();
+    await db.execute({
+        sql: 'DELETE FROM agent_memory WHERE id = ?',
+        args: [memoryId]
+    });
 }
 
 export async function createMeeting(initiatorId: number, participantId: number, topic: string): Promise<number> {

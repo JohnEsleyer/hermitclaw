@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,12 +27,24 @@
             overflow-x: hidden;
         }
 
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-        .crab-float { animation: float 6s ease-in-out infinite; }
+        .crab-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
         @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(2deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-10px) rotate(2deg);
+            }
         }
 
         .claw-pinch {
@@ -67,7 +80,7 @@
             width: 100%;
             height: 100px;
             z-index: 0;
-            background: linear-gradient(0deg, rgba(255,107,53,0) 0%, rgba(255,107,53,0.03) 50%, rgba(255,107,53,0) 100%);
+            background: linear-gradient(0deg, rgba(255, 107, 53, 0) 0%, rgba(255, 107, 53, 0.03) 50%, rgba(255, 107, 53, 0) 100%);
             opacity: 0.1;
             position: fixed;
             bottom: 100%;
@@ -76,14 +89,31 @@
         }
 
         @keyframes scanline {
-            0% { bottom: 100%; }
-            100% { bottom: -100px; }
+            0% {
+                bottom: 100%;
+            }
+
+            100% {
+                bottom: -100px;
+            }
         }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--ocean-dark); }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--crab-orange); }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ocean-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--crab-orange);
+        }
 
         .terminal-output {
             background-color: #0c0a09;
@@ -98,38 +128,82 @@
             box-sizing: border-box;
         }
 
-        .xterm-viewport::-webkit-scrollbar { width: 8px; }
-        .xterm-viewport::-webkit-scrollbar-track { background: #0c0a09; }
-        .xterm-viewport::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .xterm-viewport::-webkit-scrollbar {
+            width: 8px;
+        }
 
-        .agent-avatar { width: 42px; height: 42px; border-radius: 9999px; object-fit: cover; border: 2px solid rgba(251,146,60,.6); background:#1e293b; }
-        .agent-avatar-mini { width: 20px; height: 20px; border-radius: 9999px; object-fit: cover; border: 1px solid rgba(251,146,60,.7); background:#1e293b; }
-        .tele-chat-bg { background: radial-gradient(circle at top right, rgba(251,146,60,.12), transparent 35%), radial-gradient(circle at bottom left, rgba(14,165,233,.08), transparent 35%), #0b1220; }
-        .chat-bubble-user { background: linear-gradient(135deg, rgba(249,115,22,.95), rgba(234,88,12,.9)); border-radius: 18px 18px 6px 18px; }
-        .chat-bubble-agent { background: rgba(30,41,59,.9); border: 1px solid rgba(148,163,184,.2); border-radius: 18px 18px 18px 6px; }
+        .xterm-viewport::-webkit-scrollbar-track {
+            background: #0c0a09;
+        }
+
+        .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        .agent-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 9999px;
+            object-fit: cover;
+            border: 2px solid rgba(251, 146, 60, .6);
+            background: #1e293b;
+        }
+
+        .agent-avatar-mini {
+            width: 20px;
+            height: 20px;
+            border-radius: 9999px;
+            object-fit: cover;
+            border: 1px solid rgba(251, 146, 60, .7);
+            background: #1e293b;
+        }
+
+        .tele-chat-bg {
+            background: radial-gradient(circle at top right, rgba(251, 146, 60, .12), transparent 35%), radial-gradient(circle at bottom left, rgba(14, 165, 233, .08), transparent 35%), #0b1220;
+        }
+
+        .chat-bubble-user {
+            background: linear-gradient(135deg, rgba(249, 115, 22, .95), rgba(234, 88, 12, .9));
+            border-radius: 18px 18px 6px 18px;
+        }
+
+        .chat-bubble-agent {
+            background: rgba(30, 41, 59, .9);
+            border: 1px solid rgba(148, 163, 184, .2);
+            border-radius: 18px 18px 18px 6px;
+        }
     </style>
 </head>
+
 <body class="h-screen flex text-slate-200">
 
     <div class="scanline"></div>
 
     <!-- Auth Screen -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4 overflow-hidden">
-        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        
+        <div
+            class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-3xl pointer-events-none">
+        </div>
+
         <div class="glass-card p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
             <div class="mb-8 text-center">
                 <div class="relative w-32 h-32 mx-auto mb-6">
-                    <svg id="auth-mascot" viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_20px_rgba(255,107,53,0.5)] crab-float">
+                    <svg id="auth-mascot" viewBox="0 0 100 100"
+                        class="w-full h-full drop-shadow-[0_0_20px_rgba(255,107,53,0.5)] crab-float">
                         <defs>
                             <radialGradient id="authCrabBg" cx="50%" cy="50%" r="55%">
-                                <stop offset="0%" style="stop-color:#1e293b"/>
-                                <stop offset="100%" style="stop-color:#0f172a"/>
+                                <stop offset="0%" style="stop-color:#1e293b" />
+                                <stop offset="100%" style="stop-color:#0f172a" />
                             </radialGradient>
                         </defs>
-                        <circle cx="50" cy="50" r="46" fill="url(#authCrabBg)" stroke="#fb923c" stroke-width="2" opacity="0.95"/>
-                        <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z" fill="#ff6b35"/>
-                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="46" fill="url(#authCrabBg)" stroke="#fb923c" stroke-width="2"
+                            opacity="0.95" />
+                        <path
+                            d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z"
+                            fill="#ff6b35" />
+                        <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60"
+                            stroke="#ff6b35" stroke-width="5" stroke-linecap="round" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-bold tracking-tight text-white mb-2 gradient-text">HermitShell</h1>
@@ -137,7 +211,8 @@
             </div>
 
             <form id="auth-form" class="space-y-4" onsubmit="handleAuth(event)">
-                <div id="default-login-hint" class="hidden bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 text-xs text-orange-300 mb-2">
+                <div id="default-login-hint"
+                    class="hidden bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 text-xs text-orange-300 mb-2">
                     <div class="flex items-center gap-2 mb-1">
                         <i data-lucide="info" class="w-4 h-4"></i>
                         <strong>Default Credentials Active</strong>
@@ -146,20 +221,26 @@
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">USERNAME</label>
-                    <input type="text" id="username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required autocomplete="off" placeholder="admin">
+                    <input type="text" id="username"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white"
+                        required autocomplete="off" placeholder="admin">
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">PASSWORD</label>
-                    <input type="password" id="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white" required placeholder="••••••••">
+                    <input type="password" id="password"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-orange-500 outline-none transition-colors text-white"
+                        required placeholder="••••••••">
                 </div>
-                
+
                 <div id="auth-error" class="text-red-400 text-xs font-mono hidden text-center"></div>
 
-                <button type="submit" id="auth-btn" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20">
+                <button type="submit" id="auth-btn"
+                    class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20">
                     Authenticate
                 </button>
-                
-                <div id="default-creds-display" class="hidden text-center mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+
+                <div id="default-creds-display"
+                    class="hidden text-center mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
                     <p class="text-xs text-slate-400 mb-2">Default credentials:</p>
                     <div class="flex items-center justify-center gap-2">
                         <span class="font-mono text-orange-400 bg-slate-900 px-2 py-1 rounded text-sm">admin</span>
@@ -176,49 +257,65 @@
         <aside class="w-64 glass-panel flex flex-col z-20 h-full fixed md:relative hidden md:flex">
             <div class="p-6 flex items-center space-x-3 border-b border-white/5">
                 <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
-                    <path d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z"/>
-                    <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"/>
+                    <path
+                        d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z" />
+                    <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35"
+                        stroke-width="5" stroke-linecap="round" />
                 </svg>
                 <h1 class="font-bold tracking-tight text-lg text-white">HermitShell</h1>
             </div>
 
             <nav class="flex-1 p-4 space-y-2">
-                <a href="#" onclick="showSection('agents')" class="nav-item flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
+                <a href="#" onclick="showSection('agents')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
                     <i data-lucide="grid" class="w-5 h-5"></i>
                     <span class="font-semibold">Agents</span>
                 </a>
-                <a href="#" onclick="showSection('cubicles')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('cubicles')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="box" class="w-5 h-5"></i>
                     <span>Cubicles</span>
                 </a>
-                <a href="#" onclick="showSection('sites')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('sites')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="globe" class="w-5 h-5"></i>
                     <span>Sites</span>
                 </a>
-                <a href="#" onclick="showSection('files')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('files')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="folder-open" class="w-5 h-5"></i>
                     <span>Files</span>
                 </a>
-                <a href="#" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('audit')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="file-text" class="w-5 h-5"></i>
                     <span>Audit Logs</span>
                 </a>
-                <a href="#" onclick="showSection('metrics')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('metrics')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
                     <span>Metrics</span>
                 </a>
-                <a href="#" onclick="showSection('allowlist')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('allowlist')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="users" class="w-5 h-5"></i>
                     <span>Allowlist</span>
                 </a>
-                <a href="#" onclick="showSection('settings')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <a href="#" onclick="showSection('memories')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="brain" class="w-5 h-5"></i>
+                    <span>Memories (RAG)</span>
+                </a>
+                <a href="#" onclick="showSection('settings')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="settings" class="w-5 h-5"></i>
                     <span>Settings</span>
                 </a>
             </nav>
 
             <div class="p-6">
-                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                <button onclick="logout()"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                     <span>Logout</span>
                 </button>
@@ -227,28 +324,37 @@
 
         <main class="flex-1 flex flex-col relative z-10 overflow-hidden">
             <!-- Security Warning Banner -->
-            <div id="default-creds-warning" class="hidden bg-red-900/40 border-b border-red-500/50 text-red-200 px-8 py-3 flex justify-between items-center text-sm shadow-md">
+            <div id="default-creds-warning"
+                class="hidden bg-red-900/40 border-b border-red-500/50 text-red-200 px-8 py-3 flex justify-between items-center text-sm shadow-md">
                 <div class="flex items-center gap-3">
-                    <div class="p-1.5 bg-red-500/20 rounded-lg"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i></div>
-                    <span><strong>SECURITY WARNING:</strong> You are using default admin credentials. Please change your password in Settings.</span>
+                    <div class="p-1.5 bg-red-500/20 rounded-lg"><i data-lucide="alert-triangle"
+                            class="w-4 h-4 text-red-500"></i></div>
+                    <span><strong>SECURITY WARNING:</strong> You are using default admin credentials. Please change your
+                        password in Settings.</span>
                 </div>
-                <button onclick="showSection('settings')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">
+                <button onclick="showSection('settings')"
+                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">
                     Change Password <i data-lucide="arrow-right" class="w-3 h-3"></i>
                 </button>
             </div>
 
-            <header class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-sm">
+            <header
+                class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-sm">
                 <div>
                     <h2 class="text-2xl font-bold text-white" id="page-title">Mission Control</h2>
-                    <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span class="text-green-400">SECURE</span></p>
+                    <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span
+                            class="text-green-400">SECURE</span></p>
                 </div>
-                
+
                 <div class="flex items-center space-x-4">
-                    <button onclick="syncWebhooks(event)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2" title="Reconnect bots to Telegram">
+                    <button onclick="syncWebhooks(event)"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2"
+                        title="Reconnect bots to Telegram">
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                         <span class="hidden sm:inline">Sync Bots</span>
                     </button>
-                    <button onclick="openModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
+                    <button onclick="openModal()"
+                        class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i>
                         <span>Spawn Agent</span>
                     </button>
@@ -261,7 +367,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="cpu"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">DOCKER</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="stat-containers">0</div>
@@ -270,7 +377,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">AGENTS</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="stat-agents">0</div>
@@ -279,7 +387,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="dollar-sign"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">SPEND (24H)</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="stat-spend">$0.00</div>
@@ -288,7 +397,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">SECURITY</span>
                             </div>
                             <div class="text-xl font-bold text-white">Secure</div>
@@ -309,8 +419,12 @@
                             <h4 class="text-white font-bold">Agent Logs</h4>
                             <span class="text-xs text-slate-400">Runtime log stream across all agents.</span>
                         </div>
-                        <button onclick="loadRuntimeLogs()" class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm">Refresh Agent Logs</button>
-                        <div id="chat-output" class="mt-3 text-sm text-slate-300 whitespace-pre-wrap bg-slate-900/60 border border-slate-700 rounded-lg p-3 min-h-[72px]">No runtime logs yet.</div>
+                        <button onclick="loadRuntimeLogs()"
+                            class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm">Refresh
+                            Agent Logs</button>
+                        <div id="chat-output"
+                            class="mt-3 text-sm text-slate-300 whitespace-pre-wrap bg-slate-900/60 border border-slate-700 rounded-lg p-3 min-h-[72px]">
+                            No runtime logs yet.</div>
                     </div>
                 </div>
 
@@ -321,7 +435,8 @@
                             <i data-lucide="box" class="w-5 h-5 text-orange-500"></i>
                             Running Cubicles
                         </h3>
-                        <button onclick="loadCubicles()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
+                        <button onclick="loadCubicles()"
+                            class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                             Refresh
                         </button>
@@ -355,14 +470,19 @@
                             <i data-lucide="globe" class="w-5 h-5 text-orange-500"></i>
                             Sites (Deploy on Demand)
                         </h3>
-                        <button onclick="loadSites()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
+                        <button onclick="loadSites()"
+                            class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                             Refresh
                         </button>
                     </div>
                     <div class="glass-card p-5 rounded-2xl mb-5 text-sm text-slate-300">
-                        <p class="mb-2">Agents can build HTML/web apps inside their cubicle, run a local server, and share a public preview link when needed. Deployments are ephemeral and can be started/stopped on demand.</p>
-                        <p class="text-xs text-slate-400">Tip: use Terminal to run <span class="mono text-orange-300">python3 -m http.server 8080</span>, then share the generated preview URL to Telegram.</p>
+                        <p class="mb-2">Agents can build HTML/web apps inside their cubicle, run a local server, and
+                            share a public preview link when needed. Deployments are ephemeral and can be
+                            started/stopped on demand.</p>
+                        <p class="text-xs text-slate-400">Tip: use Terminal to run <span
+                                class="mono text-orange-300">python3 -m http.server 8080</span>, then share the
+                            generated preview URL to Telegram.</p>
                     </div>
                     <div id="sites-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
                 </div>
@@ -375,13 +495,22 @@
                     </h3>
                     <div class="glass-card p-5 rounded-2xl mb-5">
                         <div class="grid md:grid-cols-5 gap-3">
-                            <select id="files-agent" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
-                            <select id="files-user" class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
-                            <button onclick="loadWorkspaceFiles()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">Load Workspace</button>
-                            <button onclick="downloadWorkspaceArchive()" class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg">Download .tar.gz</button>
-                            <input type="file" id="workspace-upload" class="text-xs text-slate-300 bg-slate-900/50 border border-slate-700 rounded-lg p-2" onchange="uploadWorkspaceFile(event)">
+                            <select id="files-agent"
+                                class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
+                            <select id="files-user"
+                                class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"></select>
+                            <button onclick="loadWorkspaceFiles()"
+                                class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">Load
+                                Workspace</button>
+                            <button onclick="downloadWorkspaceArchive()"
+                                class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg">Download
+                                .tar.gz</button>
+                            <input type="file" id="workspace-upload"
+                                class="text-xs text-slate-300 bg-slate-900/50 border border-slate-700 rounded-lg p-2"
+                                onchange="uploadWorkspaceFile(event)">
                         </div>
-                        <p class="text-xs text-slate-400 mt-3">This makes it easier to review what an agent created before forwarding outputs in Telegram.</p>
+                        <p class="text-xs text-slate-400 mt-3">This makes it easier to review what an agent created
+                            before forwarding outputs in Telegram.</p>
                     </div>
                     <div id="files-browser" class="glass-card rounded-2xl p-5 text-sm text-slate-300">
                         Select an agent and user, then click <strong>Load Workspace</strong>.
@@ -426,7 +555,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="server" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="server"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">DOCKER</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="metric-containers">0</div>
@@ -435,7 +565,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="bot"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">AGENTS</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="metric-agents">0</div>
@@ -444,7 +575,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="dollar-sign" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i
+                                        data-lucide="dollar-sign" class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">SPEND</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="metric-spend">$0.00</div>
@@ -453,7 +585,8 @@
 
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="shield"
+                                        class="w-5 h-5"></i></div>
                                 <span class="text-xs font-mono text-slate-500">ALLOWLIST</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="metric-allowlist">0</div>
@@ -462,9 +595,18 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="glass-card p-4 rounded-xl"><div class="text-xs text-slate-400">Audit Approved</div><div id="metric-audit-approved" class="text-xl font-bold text-green-400">0</div></div>
-                        <div class="glass-card p-4 rounded-xl"><div class="text-xs text-slate-400">Audit Pending</div><div id="metric-audit-pending" class="text-xl font-bold text-yellow-400">0</div></div>
-                        <div class="glass-card p-4 rounded-xl"><div class="text-xs text-slate-400">Runtime Errors</div><div id="metric-runtime-errors" class="text-xl font-bold text-red-400">0</div></div>
+                        <div class="glass-card p-4 rounded-xl">
+                            <div class="text-xs text-slate-400">Audit Approved</div>
+                            <div id="metric-audit-approved" class="text-xl font-bold text-green-400">0</div>
+                        </div>
+                        <div class="glass-card p-4 rounded-xl">
+                            <div class="text-xs text-slate-400">Audit Pending</div>
+                            <div id="metric-audit-pending" class="text-xl font-bold text-yellow-400">0</div>
+                        </div>
+                        <div class="glass-card p-4 rounded-xl">
+                            <div class="text-xs text-slate-400">Runtime Errors</div>
+                            <div id="metric-runtime-errors" class="text-xl font-bold text-red-400">0</div>
+                        </div>
                     </div>
 
                     <div class="glass-card p-6 rounded-2xl">
@@ -472,11 +614,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="flex items-center justify-between bg-slate-800 p-4 rounded-lg">
                                 <span class="text-slate-300">OpenAI API Key</span>
-                                <span id="metric-openai" class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not Set</span>
+                                <span id="metric-openai"
+                                    class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not
+                                    Set</span>
                             </div>
                             <div class="flex items-center justify-between bg-slate-800 p-4 rounded-lg">
                                 <span class="text-slate-300">OpenRouter API Key</span>
-                                <span id="metric-openrouter" class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not Set</span>
+                                <span id="metric-openrouter"
+                                    class="text-xs font-mono px-2 py-1 rounded bg-red-500/20 text-red-400">Not
+                                    Set</span>
                             </div>
                         </div>
                     </div>
@@ -489,7 +635,8 @@
                             <i data-lucide="users" class="w-5 h-5 text-orange-500"></i>
                             User Allowlist
                         </h3>
-                        <button onclick="openAllowlistModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2">
+                        <button onclick="openAllowlistModal()"
+                            class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                             Add User
                         </button>
@@ -515,6 +662,58 @@
                     </div>
                 </div>
 
+                <!-- Memories Section -->
+                <div id="section-memories" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="brain" class="w-5 h-5 text-orange-500"></i>
+                            Agent Memories
+                        </h3>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl mb-5 text-sm text-slate-300">
+                        <p>Store persistent facts, rules, and preferences for your agents here. When a user interacts
+                            with an agent, relevant memories will be automatically injected into the system prompt.</p>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-2xl mb-6">
+                        <div class="flex items-center gap-3 w-full mb-4">
+                            <label class="text-sm font-bold text-slate-300">Select Agent:</label>
+                            <select id="memory-agent-select"
+                                class="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white"
+                                onchange="loadAgentMemories()">
+                                <option value="">Select an agent...</option>
+                            </select>
+                        </div>
+
+                        <div class="w-full flex gap-3 mb-6">
+                            <input type="text" id="new-memory-input"
+                                class="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                                placeholder="Enter a new fact or rule...">
+                            <button onclick="addAgentMemory()"
+                                class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add Memory
+                            </button>
+                        </div>
+
+                        <div class="rounded-xl overflow-hidden border border-slate-700">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-800/80 text-slate-400">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-mono">MEMORY THOUGHT (FACT/RULE)</th>
+                                        <th class="px-4 py-3 text-right font-mono">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="memories-tbody" class="divide-y divide-slate-800/80">
+                                </tbody>
+                            </table>
+                            <div id="memories-empty" class="p-8 text-center text-slate-500 hidden">
+                                <i data-lucide="brain" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+                                No memories stored for this agent yet.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Settings Section -->
                 <div id="section-settings" class="hidden">
                     <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -525,25 +724,33 @@
                     <!-- Admin Credentials Settings -->
                     <div class="glass-card p-6 rounded-2xl mb-6" id="admin-creds-card">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="p-2 bg-red-500/10 rounded-lg text-red-500"><i data-lucide="shield-alert" class="w-5 h-5"></i></div>
+                            <div class="p-2 bg-red-500/10 rounded-lg text-red-500"><i data-lucide="shield-alert"
+                                    class="w-5 h-5"></i></div>
                             <h4 class="text-lg font-bold text-white">Admin Credentials</h4>
                         </div>
-                        <div id="settings-creds-warning" class="hidden bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+                        <div id="settings-creds-warning"
+                            class="hidden bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
                             <p class="text-sm text-red-300 flex items-center gap-2">
                                 <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                                <strong>Action Required:</strong> You are using default credentials. Please change your username and password immediately.
+                                <strong>Action Required:</strong> You are using default credentials. Please change your
+                                username and password immediately.
                             </p>
                         </div>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-xs font-mono text-slate-400 mb-2">NEW USERNAME</label>
-                                <input type="text" id="setting-admin-username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="Enter new username">
+                                <input type="text" id="setting-admin-username"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="Enter new username">
                             </div>
                             <div>
                                 <label class="block text-xs font-mono text-slate-400 mb-2">NEW PASSWORD</label>
-                                <input type="password" id="setting-admin-password" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="Enter new password">
+                                <input type="password" id="setting-admin-password"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="Enter new password">
                             </div>
-                            <button onclick="changeAdminCredentials()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2 shadow-lg shadow-red-900/20">
+                            <button onclick="changeAdminCredentials()"
+                                class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2 shadow-lg shadow-red-900/20">
                                 <i data-lucide="save" class="w-4 h-4"></i> Update Credentials
                             </button>
                         </div>
@@ -552,22 +759,30 @@
                     <!-- Operator Settings -->
                     <div class="glass-card p-6 rounded-2xl mb-6">
                         <div class="flex items-center gap-3 mb-6">
-                            <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="shield" class="w-5 h-5"></i></div>
+                            <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="shield"
+                                    class="w-5 h-5"></i></div>
                             <h4 class="text-lg font-bold text-white">Operator (Primary Admin)</h4>
                         </div>
                         <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-4">
-                            <p class="text-xs text-orange-300">The Operator receives all verification codes, HITL approval requests, and delegation requests. Set this to your Telegram User ID.</p>
+                            <p class="text-xs text-orange-300">The Operator receives all verification codes, HITL
+                                approval requests, and delegation requests. Set this to your Telegram User ID.</p>
                         </div>
                         <div class="space-y-4">
                             <div>
                                 <div class="flex items-center gap-2 mb-2">
                                     <label class="text-xs font-mono text-slate-400">OPERATOR TELEGRAM ID</label>
-                                    <button onclick="alert('Send /start to @userinfobot on Telegram to get your User ID')" class="text-slate-400 hover:text-orange-500 transition-colors" title="How to find my ID?">
+                                    <button
+                                        onclick="alert('Send /start to @userinfobot on Telegram to get your User ID')"
+                                        class="text-slate-400 hover:text-orange-500 transition-colors"
+                                        title="How to find my ID?">
                                         <i data-lucide="help-circle" class="w-4 h-4"></i>
                                     </button>
                                 </div>
-                                <input type="text" id="setting-operator_telegram_id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., 123456789">
-                                <p class="text-xs text-slate-500 mt-1">Required for agent verification and HITL approvals</p>
+                                <input type="text" id="setting-operator_telegram_id"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="e.g., 123456789">
+                                <p class="text-xs text-slate-500 mt-1">Required for agent verification and HITL
+                                    approvals</p>
                             </div>
                         </div>
                     </div>
@@ -575,26 +790,36 @@
                     <!-- General Settings -->
                     <div class="glass-card p-6 rounded-2xl mb-6">
                         <div class="flex items-center gap-3 mb-6">
-                            <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="globe" class="w-5 h-5"></i></div>
+                            <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="globe"
+                                    class="w-5 h-5"></i></div>
                             <h4 class="text-lg font-bold text-white">General</h4>
                         </div>
                         <div class="space-y-4">
                             <div>
                                 <div class="flex items-center gap-2 mb-2">
                                     <label class="text-xs font-mono text-slate-400">PUBLIC_URL</label>
-                                    <button onclick="openPublicUrlGuide()" class="text-slate-400 hover:text-orange-500 transition-colors" title="Why do I need this?">
+                                    <button onclick="openPublicUrlGuide()"
+                                        class="text-slate-400 hover:text-orange-500 transition-colors"
+                                        title="Why do I need this?">
                                         <i data-lucide="help-circle" class="w-4 h-4"></i>
                                     </button>
                                 </div>
-                                <input type="url" id="setting-public_url" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="https://your-domain.com">
+                                <input type="url" id="setting-public_url"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="https://your-domain.com">
                             </div>
                             <div class="flex items-center gap-3">
-                                <input type="checkbox" id="setting-hitl_enabled" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
-                                <label for="setting-hitl_enabled" class="text-sm text-slate-300">Enable Human-in-the-Loop (HITL) by default</label>
+                                <input type="checkbox" id="setting-hitl_enabled"
+                                    class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
+                                <label for="setting-hitl_enabled" class="text-sm text-slate-300">Enable
+                                    Human-in-the-Loop (HITL) by default</label>
                             </div>
                             <div>
-                                <label class="block text-xs font-mono text-slate-400 mb-2">DEFAULT_DAILY_LIMIT (USD)</label>
-                                <input type="number" step="0.01" id="setting-default_daily_limit" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="1.00">
+                                <label class="block text-xs font-mono text-slate-400 mb-2">DEFAULT_DAILY_LIMIT
+                                    (USD)</label>
+                                <input type="number" step="0.01" id="setting-default_daily_limit"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="1.00">
                             </div>
                         </div>
                     </div>
@@ -602,13 +827,15 @@
                     <!-- LLM Provider Settings -->
                     <div class="glass-card p-6 rounded-2xl mb-6">
                         <div class="flex items-center gap-3 mb-6">
-                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="cpu"
+                                    class="w-5 h-5"></i></div>
                             <h4 class="text-lg font-bold text-white">LLM Provider</h4>
                         </div>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-xs font-mono text-slate-400 mb-2">PROVIDER</label>
-                                <select id="setting-default_provider" onchange="updateModelOptions()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
+                                <select id="setting-default_provider" onchange="updateModelOptions()"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
                                     <option value="openrouter">OpenRouter (Multi-provider)</option>
                                     <option value="openai">OpenAI</option>
                                     <option value="anthropic">Anthropic (Claude)</option>
@@ -621,9 +848,12 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-mono text-slate-400 mb-2">MODEL</label>
-                                <select id="setting-default_model" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
+                                <select id="setting-default_model"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
                                 </select>
-                                <input type="text" id="setting-custom_model" class="hidden w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors mt-2" placeholder="Enter custom model name...">
+                                <input type="text" id="setting-custom_model"
+                                    class="hidden w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors mt-2"
+                                    placeholder="Enter custom model name...">
                             </div>
                         </div>
                     </div>
@@ -631,49 +861,68 @@
                     <!-- API Keys -->
                     <div class="glass-card p-6 rounded-2xl mb-6">
                         <div class="flex items-center gap-3 mb-6">
-                            <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="key" class="w-5 h-5"></i></div>
+                            <div class="p-2 bg-green-500/10 rounded-lg text-green-500"><i data-lucide="key"
+                                    class="w-5 h-5"></i></div>
                             <h4 class="text-lg font-bold text-white">API Keys</h4>
                         </div>
-                        <p class="text-slate-400 text-sm mb-4">Keys are stored in the database. Environment variables take precedence if set.</p>
+                        <p class="text-slate-400 text-sm mb-4">Keys are stored in the database. Environment variables
+                            take precedence if set.</p>
                         <div class="space-y-4">
                             <div class="provider-key" data-provider="openrouter">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">OPENROUTER_API_KEY</label>
-                                <input type="password" id="setting-openrouter_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="sk-or-...">
+                                <input type="password" id="setting-openrouter_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="sk-or-...">
                             </div>
                             <div class="provider-key" data-provider="openai">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">OPENAI_API_KEY</label>
-                                <input type="password" id="setting-openai_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="sk-...">
+                                <input type="password" id="setting-openai_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="sk-...">
                             </div>
                             <div class="provider-key" data-provider="anthropic">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">ANTHROPIC_API_KEY</label>
-                                <input type="password" id="setting-anthropic_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="sk-ant-...">
+                                <input type="password" id="setting-anthropic_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="sk-ant-...">
                             </div>
                             <div class="provider-key" data-provider="google">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">GOOGLE_API_KEY</label>
-                                <input type="password" id="setting-google_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="AIza...">
+                                <input type="password" id="setting-google_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="AIza...">
                             </div>
                             <div class="provider-key" data-provider="groq">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">GROQ_API_KEY</label>
-                                <input type="password" id="setting-groq_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="gsk_...">
+                                <input type="password" id="setting-groq_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="gsk_...">
                             </div>
                             <div class="provider-key" data-provider="mistral">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">MISTRAL_API_KEY</label>
-                                <input type="password" id="setting-mistral_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="...">
+                                <input type="password" id="setting-mistral_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="...">
                             </div>
                             <div class="provider-key" data-provider="deepseek">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">DEEPSEEK_API_KEY</label>
-                                <input type="password" id="setting-deepseek_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="sk-...">
+                                <input type="password" id="setting-deepseek_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="sk-...">
                             </div>
                             <div class="provider-key" data-provider="xai">
                                 <label class="block text-xs font-mono text-slate-400 mb-2">XAI_API_KEY</label>
-                                <input type="password" id="setting-xai_api_key" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="xai-...">
+                                <input type="password" id="setting-xai_api_key"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                    placeholder="xai-...">
                             </div>
                         </div>
                     </div>
 
                     <!-- Save Button -->
                     <div class="flex justify-end">
-                        <button onclick="saveSettings()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2">
+                        <button onclick="saveSettings()"
+                            class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2">
                             <i data-lucide="save" class="w-4 h-4"></i>
                             Save All Settings
                         </button>
@@ -682,210 +931,272 @@
             </div>
         </main>
     </div>
-                </div>
-            </div>
-        </main>
+    </div>
+    </div>
+    </main>
     </div>
 
     <!-- Create Agent Modal (3-Step Verification Wizard) -->
-    <div id="create-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div id="create-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 w-full max-w-lg max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50">
                 <div>
                     <h3 class="text-lg font-bold text-white">Initialize New Agent</h3>
-                    <p id="wizard-step-label" class="text-xs text-orange-400 font-mono mt-1">STEP 1 OF 3: CONFIGURATION</p>
+                    <p id="wizard-step-label" class="text-xs text-orange-400 font-mono mt-1">STEP 1 OF 3: CONFIGURATION
+                    </p>
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
             </div>
-            
+
             <!-- Step Progress -->
             <div class="px-6 pt-4">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center">
-                        <div id="step1-indicator" class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm">1</div>
+                        <div id="step1-indicator"
+                            class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
+                            1</div>
                         <div id="step1-line" class="w-16 h-1 bg-slate-700 mx-2"></div>
                     </div>
                     <div class="flex items-center">
-                        <div id="step2-indicator" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold text-sm">2</div>
+                        <div id="step2-indicator"
+                            class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold text-sm">
+                            2</div>
                         <div id="step2-line" class="w-16 h-1 bg-slate-700 mx-2"></div>
                     </div>
                     <div class="flex items-center">
-                        <div id="step3-indicator" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold text-sm">3</div>
+                        <div id="step3-indicator"
+                            class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold text-sm">
+                            3</div>
                     </div>
                 </div>
             </div>
 
             <!-- Scrollable Content -->
             <div class="overflow-y-auto flex-1 px-6 pb-4" style="max-height: calc(90vh - 200px);">
-            <!-- Step 1: Configuration -->
-            <div id="wizard-step1" class="p-6 space-y-4">
-                <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
-                    <p class="text-xs text-blue-300"><strong>Step 1:</strong> Enter your agent's details. You'll verify the Telegram token in the next step.</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">DESIGNATION (NAME) *</label>
-                    <input type="text" id="new-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., Sherlock">
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">ROLE DESCRIPTION</label>
-                    <input type="text" id="new-role" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., Security Researcher">
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM TOKEN *</label>
-                    <input type="password" id="new-token" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="From @BotFather">
-                    <p class="text-xs text-slate-500 mt-1">Get a token by creating a bot with <a href="https://t.me/BotFather" target="_blank" class="text-orange-400 hover:underline">@BotFather</a></p>
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">DOCKER IMAGE</label>
-                    <select id="new-image" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
-                        <option value="hermit/base:latest">hermit/base (General Tools)</option>
-                        <option value="hermit/python:latest">hermit/python (Data Analysis)</option>
-                        <option value="hermit/netsec:latest">hermit/netsec (Security Tools)</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-mono text-slate-400 mb-1">LLM PROVIDER</label>
-                        <select id="new-llm-provider" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" onchange="updateAgentModelOptions()">
-                            <option value="default">System Default</option>
-                            <option value="openrouter">OpenRouter</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic</option>
-                            <option value="google">Google</option>
-                            <option value="groq">Groq</option>
-                            <option value="mistral">Mistral</option>
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="xai">xAI</option>
-                        </select>
+                <!-- Step 1: Configuration -->
+                <div id="wizard-step1" class="p-6 space-y-4">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+                        <p class="text-xs text-blue-300"><strong>Step 1:</strong> Enter your agent's details. You'll
+                            verify the Telegram token in the next step.</p>
                     </div>
                     <div>
-                        <label class="block text-xs font-mono text-slate-400 mb-1">LLM MODEL</label>
-                        <select id="new-llm-model" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white">
-                            <option value="">Use System Default</option>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">DESIGNATION (NAME) *</label>
+                        <input type="text" id="new-name"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                            placeholder="e.g., Sherlock">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">ROLE DESCRIPTION</label>
+                        <input type="text" id="new-role"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                            placeholder="e.g., Security Researcher">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM TOKEN *</label>
+                        <input type="password" id="new-token"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                            placeholder="From @BotFather">
+                        <p class="text-xs text-slate-500 mt-1">Get a token by creating a bot with <a
+                                href="https://t.me/BotFather" target="_blank"
+                                class="text-orange-400 hover:underline">@BotFather</a></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">DOCKER IMAGE</label>
+                        <select id="new-image"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors">
+                            <option value="hermit/base:latest">hermit/base (General Tools)</option>
+                            <option value="hermit/python:latest">hermit/python (Data Analysis)</option>
+                            <option value="hermit/netsec:latest">hermit/netsec (Security Tools)</option>
                         </select>
-                        <input type="text" id="new-llm-model-custom" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white hidden" placeholder="Enter custom model name">
                     </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE PICTURE URL</label>
-                    <input type="text" id="new-profile-picture" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="https://...">
-                    <div class="mt-2 flex items-center gap-3">
-                        <input type="file" id="new-profile-picture-file" accept="image/*" class="hidden" onchange="uploadProfilePicture(event)">
-                        <button type="button" onclick="document.getElementById('new-profile-picture-file').click()" class="bg-slate-800 border border-slate-700 text-white px-3 py-2 rounded-lg text-xs">Upload image</button>
-                        <img id="new-profile-picture-preview" class="agent-avatar hidden" alt="Profile preview">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE BIO</label>
-                    <input type="text" id="new-profile-bio" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="Short intro">
-                </div>
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" id="new-require-approval" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
-                    <label for="new-require-approval" class="text-sm text-slate-300">Require approval for dangerous commands (HITL)</label>
-                </div>
-            </div>
-
-            <!-- Step 2: Handshake -->
-            <div id="wizard-step2" class="p-6 space-y-4 hidden">
-                <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
-                    <p class="text-xs text-yellow-300"><strong>Step 2:</strong> Verify your bot token works. We'll send a verification code to your Telegram.</p>
-                </div>
-                
-                <div class="bg-slate-800 rounded-lg p-4">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                            <p class="text-white font-semibold">Verification Required</p>
-                            <p class="text-xs text-slate-400">Before creating an agent, verify the bot token</p>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">LLM PROVIDER</label>
+                            <select id="new-llm-provider"
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+                                onchange="updateAgentModelOptions()">
+                                <option value="default">System Default</option>
+                                <option value="openrouter">OpenRouter</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="google">Google</option>
+                                <option value="groq">Groq</option>
+                                <option value="mistral">Mistral</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="xai">xAI</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">LLM MODEL</label>
+                            <select id="new-llm-model"
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white">
+                                <option value="">Use System Default</option>
+                            </select>
+                            <input type="text" id="new-llm-model-custom"
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white hidden"
+                                placeholder="Enter custom model name">
                         </div>
                     </div>
-                    
-                    <div class="text-sm text-slate-300 space-y-2 mb-4">
-                        <p><strong>Important:</strong></p>
-                        <ol class="list-decimal list-inside text-slate-400 space-y-1">
-                            <li>Click <strong>"Send Verification Code"</strong> below.</li>
-                            <li>Check your Operator Telegram account for the 6-digit code.</li>
-                            <li>Enter the code in the next step to validate the agent.</li>
-                            <li><em>After</em> validation, go to your bot on Telegram and send <code class="bg-slate-700 px-1 rounded">/start</code></li>
-                        </ol>
-                    </div>
-                    
-                    <div id="send-code-status" class="hidden mb-4">
-                        <div id="send-code-loading" class="flex items-center gap-2 text-blue-400">
-                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Sending verification code...</span>
-                        </div>
-                        <div id="send-code-success" class="hidden text-green-400 flex items-center gap-2">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i>
-                            <span>Code sent! Check your Telegram.</span>
-                        </div>
-                        <div id="send-code-error" class="hidden text-red-400 flex items-center gap-2">
-                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                            <span id="send-code-error-msg">Failed to send code.</span>
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE PICTURE URL</label>
+                        <input type="text" id="new-profile-picture"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+                            placeholder="https://...">
+                        <div class="mt-2 flex items-center gap-3">
+                            <input type="file" id="new-profile-picture-file" accept="image/*" class="hidden"
+                                onchange="uploadProfilePicture(event)">
+                            <button type="button" onclick="document.getElementById('new-profile-picture-file').click()"
+                                class="bg-slate-800 border border-slate-700 text-white px-3 py-2 rounded-lg text-xs">Upload
+                                image</button>
+                            <img id="new-profile-picture-preview" class="agent-avatar hidden" alt="Profile preview">
                         </div>
                     </div>
-                    
-                    <button id="send-code-btn" onclick="sendVerificationCode()" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                        <span>Send Verification Code</span>
-                    </button>
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">PROFILE BIO</label>
+                        <input type="text" id="new-profile-bio"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+                            placeholder="Short intro">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="new-require-approval"
+                            class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-orange-500 focus:ring-orange-500">
+                        <label for="new-require-approval" class="text-sm text-slate-300">Require approval for dangerous
+                            commands (HITL)</label>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Step 3: Verification -->
-            <div id="wizard-step3" class="p-6 space-y-4 hidden">
-                <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
-                    <p class="text-xs text-green-300"><strong>Step 3:</strong> Enter the 6-digit code sent to your Telegram to complete verification.</p>
-                </div>
-                
-                <div class="bg-slate-800 rounded-lg p-4">
-                    <label class="block text-xs font-mono text-slate-400 mb-3">VERIFICATION CODE</label>
-                    <div class="flex gap-2 justify-center mb-4">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 0)">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 1)">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 2)">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 3)">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 4)">
-                        <input type="text" maxlength="1" class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors" oninput="handleDigitInput(this, 5)">
+                <!-- Step 2: Handshake -->
+                <div id="wizard-step2" class="p-6 space-y-4 hidden">
+                    <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
+                        <p class="text-xs text-yellow-300"><strong>Step 2:</strong> Verify your bot token works. We'll
+                            send a verification code to your Telegram.</p>
                     </div>
-                    
-                    <div id="verify-status" class="hidden mb-4 text-center">
-                        <div id="verify-loading" class="flex items-center justify-center gap-2 text-blue-400">
-                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Verifying...</span>
+
+                    <div class="bg-slate-800 rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="p-2 bg-orange-500/10 rounded-lg text-orange-500"><i data-lucide="shield-check"
+                                    class="w-5 h-5"></i></div>
+                            <div>
+                                <p class="text-white font-semibold">Verification Required</p>
+                                <p class="text-xs text-slate-400">Before creating an agent, verify the bot token</p>
+                            </div>
                         </div>
-                        <div id="verify-success" class="hidden text-green-400 flex items-center justify-center gap-2">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i>
-                            <span>Verified! Creating agent...</span>
+
+                        <div class="text-sm text-slate-300 space-y-2 mb-4">
+                            <p><strong>Important:</strong></p>
+                            <ol class="list-decimal list-inside text-slate-400 space-y-1">
+                                <li>Click <strong>"Send Verification Code"</strong> below.</li>
+                                <li>Check your Operator Telegram account for the 6-digit code.</li>
+                                <li>Enter the code in the next step to validate the agent.</li>
+                                <li><em>After</em> validation, go to your bot on Telegram and send <code
+                                        class="bg-slate-700 px-1 rounded">/start</code></li>
+                            </ol>
                         </div>
-                        <div id="verify-error" class="hidden text-red-400 flex items-center justify-center gap-2">
-                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                            <span id="verify-error-msg">Invalid code.</span>
+
+                        <div id="send-code-status" class="hidden mb-4">
+                            <div id="send-code-loading" class="flex items-center gap-2 text-blue-400">
+                                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span>Sending verification code...</span>
+                            </div>
+                            <div id="send-code-success" class="hidden text-green-400 flex items-center gap-2">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                <span>Code sent! Check your Telegram.</span>
+                            </div>
+                            <div id="send-code-error" class="hidden text-red-400 flex items-center gap-2">
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                <span id="send-code-error-msg">Failed to send code.</span>
+                            </div>
                         </div>
+
+                        <button id="send-code-btn" onclick="sendVerificationCode()"
+                            class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            <span>Send Verification Code</span>
+                        </button>
                     </div>
-                    
-                    <p class="text-xs text-slate-500 text-center">Didn't receive the code? <button onclick="goToStep(2)" class="text-orange-400 hover:underline">Resend</button></p>
                 </div>
-            </div>
+
+                <!-- Step 3: Verification -->
+                <div id="wizard-step3" class="p-6 space-y-4 hidden">
+                    <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+                        <p class="text-xs text-green-300"><strong>Step 3:</strong> Enter the 6-digit code sent to your
+                            Telegram to complete verification.</p>
+                    </div>
+
+                    <div class="bg-slate-800 rounded-lg p-4">
+                        <label class="block text-xs font-mono text-slate-400 mb-3">VERIFICATION CODE</label>
+                        <div class="flex gap-2 justify-center mb-4">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 0)">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 1)">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 2)">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 3)">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 4)">
+                            <input type="text" maxlength="1"
+                                class="verification-digit w-12 h-14 text-center text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-orange-500 focus:outline-none transition-colors"
+                                oninput="handleDigitInput(this, 5)">
+                        </div>
+
+                        <div id="verify-status" class="hidden mb-4 text-center">
+                            <div id="verify-loading" class="flex items-center justify-center gap-2 text-blue-400">
+                                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span>Verifying...</span>
+                            </div>
+                            <div id="verify-success"
+                                class="hidden text-green-400 flex items-center justify-center gap-2">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                <span>Verified! Creating agent...</span>
+                            </div>
+                            <div id="verify-error" class="hidden text-red-400 flex items-center justify-center gap-2">
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                <span id="verify-error-msg">Invalid code.</span>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-500 text-center">Didn't receive the code? <button
+                                onclick="goToStep(2)" class="text-orange-400 hover:underline">Resend</button></p>
+                    </div>
+                </div>
             </div>
 
             <div class="p-6 pt-0 flex flex-col sm:flex-row justify-between gap-3">
-                <button id="wizard-back-btn" onclick="wizardBack()" class="hidden px-4 py-2 text-slate-400 hover:text-white flex items-center gap-2 order-2 sm:order-1">
+                <button id="wizard-back-btn" onclick="wizardBack()"
+                    class="hidden px-4 py-2 text-slate-400 hover:text-white flex items-center gap-2 order-2 sm:order-1">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                     <span>Back</span>
                 </button>
                 <div class="flex-1 order-1 sm:order-2"></div>
-                <button id="wizard-next-btn" onclick="wizardNext()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2.5 rounded-lg font-bold transition-all flex items-center gap-2 order-3">
+                <button id="wizard-next-btn" onclick="wizardNext()"
+                    class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2.5 rounded-lg font-bold transition-all flex items-center gap-2 order-3">
                     <span>Continue</span>
                     <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
-                <button id="wizard-create-btn" onclick="createAgentWithVerification()" class="hidden bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-lg font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto order-3">
+                <button id="wizard-create-btn" onclick="createAgentWithVerification()"
+                    class="hidden bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-lg font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto order-3">
                     <i data-lucide="check" class="w-4 h-4"></i>
                     <span>Create Agent</span>
                 </button>
@@ -894,14 +1205,17 @@
     </div>
 
     <!-- Test Agent Modal -->
-    <div id="test-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div id="test-modal"
+        class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-slate-800 px-6 py-4 flex justify-between items-center border-b border-slate-700">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <i data-lucide="play-circle" class="w-5 h-5 text-green-500"></i>
                     Agent Test Result
                 </h3>
-                <button onclick="closeTestModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeTestModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
             </div>
             <div class="p-6 overflow-y-auto max-h-[60vh]">
                 <div id="test-loading" class="hidden flex flex-col items-center justify-center py-10 space-y-4">
@@ -910,22 +1224,28 @@
                 </div>
                 <div id="test-content" class="hidden">
                     <div class="bg-[#0c0a09] border border-slate-800 rounded-lg p-4 relative group">
-                        <button onclick="copyTestOutput()" class="absolute top-2 right-2 p-2 bg-slate-800 rounded-md text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" title="Copy to clipboard">
+                        <button onclick="copyTestOutput()"
+                            class="absolute top-2 right-2 p-2 bg-slate-800 rounded-md text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Copy to clipboard">
                             <i data-lucide="copy" class="w-4 h-4"></i>
                         </button>
-                        <pre id="test-output" class="text-green-400 font-mono text-sm whitespace-pre-wrap break-words"></pre>
+                        <pre id="test-output"
+                            class="text-green-400 font-mono text-sm whitespace-pre-wrap break-words"></pre>
                     </div>
                 </div>
             </div>
             <div class="bg-slate-800/50 px-6 py-4 border-t border-slate-700 flex justify-end">
-                <button onclick="closeTestModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors">Close</button>
+                <button onclick="closeTestModal()"
+                    class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Terminal Modal with xterm.js -->
-    <div id="terminal-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="w-full max-w-4xl h-[80vh] bg-[#0c0a09] border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div id="terminal-modal"
+        class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="w-full max-w-4xl h-[80vh] bg-[#0c0a09] border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-slate-800 px-4 py-2 flex justify-between items-center border-b border-slate-700">
                 <div class="flex items-center gap-2">
                     <div class="w-3 h-3 rounded-full bg-red-500"></div>
@@ -934,10 +1254,12 @@
                     <span id="term-title" class="ml-2 text-slate-400">root@hermitshell:~</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="attachTerminal()" class="text-orange-500 hover:text-white text-sm" title="Attach to container">
+                    <button onclick="attachTerminal()" class="text-orange-500 hover:text-white text-sm"
+                        title="Attach to container">
                         <i data-lucide="link" class="w-4 h-4"></i>
                     </button>
-                    <button onclick="closeTerminal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button onclick="closeTerminal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                            class="w-4 h-4"></i></button>
                 </div>
             </div>
             <div id="xterm-container"></div>
@@ -945,63 +1267,88 @@
     </div>
 
     <!-- Webhook Guide Modal -->
-    <div id="webhook-guide-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
+    <div id="webhook-guide-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50 sticky top-0">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <i data-lucide="webhook" class="w-5 h-5 text-blue-500"></i>
                     Telegram Webhook Setup Guide
                 </h3>
-                <button onclick="closeWebhookGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeWebhookGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
             </div>
             <div class="p-6 space-y-6 text-slate-300">
                 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to send messages to your HermitShell server instead of your bot polling for updates. It's the standard way to receive messages in production.</p>
+                    <p class="text-sm text-blue-300"><strong>What is a Webhook?</strong> A webhook tells Telegram to
+                        send messages to your HermitShell server instead of your bot polling for updates. It's the
+                        standard way to receive messages in production.</p>
                 </div>
 
                 <div>
-                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">1</span> Get Your Public URL</h4>
-                    <p class="text-sm text-slate-400 mb-3">Your server must be accessible from the internet. If running locally, use a tunnel service:</p>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span
+                            class="bg-orange-600 text-xs px-2 py-0.5 rounded">1</span> Get Your Public URL</h4>
+                    <p class="text-sm text-slate-400 mb-3">Your server must be accessible from the internet. If running
+                        locally, use a tunnel service:</p>
                     <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm text-green-400">
-# Using Cloudflare Tunnel (recommended)<br>
-curl -sL https://run.cloudflare.com/ | sh<br>
-cloudflared tunnel create hermitshell<br>
-cloudflared tunnel url hermitshell
+                        # Using Cloudflare Tunnel (recommended)<br>
+                        curl -sL https://run.cloudflare.com/ | sh<br>
+                        cloudflared tunnel create hermitshell<br>
+                        cloudflared tunnel url hermitshell
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">Or use <a href="https://ngrok.com" target="_blank" class="text-orange-400 hover:underline">ngrok</a>: <code class="bg-slate-800 px-1 rounded">ngrok http 3000</code></p>
+                    <p class="text-xs text-slate-500 mt-2">Or use <a href="https://ngrok.com" target="_blank"
+                            class="text-orange-400 hover:underline">ngrok</a>: <code
+                            class="bg-slate-800 px-1 rounded">ngrok http 3000</code></p>
                 </div>
 
                 <div>
-                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">2</span> Set Your Public URL in Dashboard</h4>
-                    <p class="text-sm text-slate-400 mb-3">Go to Settings and update the <code class="bg-slate-800 px-1 rounded">public_url</code> setting with your public URL (e.g., <code class="bg-slate-800 px-1 rounded">https://your-tunnel-url.cloudflare.net</code>)</p>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span
+                            class="bg-orange-600 text-xs px-2 py-0.5 rounded">2</span> Set Your Public URL in Dashboard
+                    </h4>
+                    <p class="text-sm text-slate-400 mb-3">Go to Settings and update the <code
+                            class="bg-slate-800 px-1 rounded">public_url</code> setting with your public URL (e.g.,
+                        <code class="bg-slate-800 px-1 rounded">https://your-tunnel-url.cloudflare.net</code>)
+                    </p>
                 </div>
 
                 <div>
-                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">3</span> Set the Webhook via API</h4>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span
+                            class="bg-orange-600 text-xs px-2 py-0.5 rounded">3</span> Set the Webhook via API</h4>
                     <p class="text-sm text-slate-400 mb-3">Run this command in your terminal:</p>
                     <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
-<span class="text-blue-400">curl</span> -X POST \<br>
-&nbsp;&nbsp;"https://api.telegram.org/bot<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>/setWebhook" \<br>
-&nbsp;&nbsp;-d "url=<span class="text-green-400">&lt;YOUR_PUBLIC_URL&gt;</span>/webhook/<span class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>"
+                        <span class="text-blue-400">curl</span> -X POST \<br>
+                        &nbsp;&nbsp;"https://api.telegram.org/bot<span
+                            class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>/setWebhook" \<br>
+                        &nbsp;&nbsp;-d "url=<span class="text-green-400">&lt;YOUR_PUBLIC_URL&gt;</span>/webhook/<span
+                            class="text-orange-400">&lt;YOUR_BOT_TOKEN&gt;</span>"
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">Replace <code class="bg-slate-800 px-1 rounded">&lt;YOUR_BOT_TOKEN&gt;</code> with your Telegram bot token and <code class="bg-slate-800 px-1 rounded">&lt;YOUR_PUBLIC_URL&gt;</code> with your public URL.</p>
+                    <p class="text-xs text-slate-500 mt-2">Replace <code
+                            class="bg-slate-800 px-1 rounded">&lt;YOUR_BOT_TOKEN&gt;</code> with your Telegram bot token
+                        and <code class="bg-slate-800 px-1 rounded">&lt;YOUR_PUBLIC_URL&gt;</code> with your public URL.
+                    </p>
                 </div>
 
                 <div>
-                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span class="bg-orange-600 text-xs px-2 py-0.5 rounded">4</span> Verify It Works</h4>
+                    <h4 class="text-white font-bold mb-2 flex items-center gap-2"><span
+                            class="bg-orange-600 text-xs px-2 py-0.5 rounded">4</span> Verify It Works</h4>
                     <p class="text-sm text-slate-400 mb-3">Check your webhook info:</p>
                     <div class="bg-slate-800 p-3 rounded-lg font-mono text-sm">
-<span class="text-blue-400">curl</span> "https://api.telegram.org/bot<span class="text-orange-400">&lt;BOT_TOKEN&gt;</span>/getWebhookInfo"
+                        <span class="text-blue-400">curl</span> "https://api.telegram.org/bot<span
+                            class="text-orange-400">&lt;BOT_TOKEN&gt;</span>/getWebhookInfo"
                     </div>
-                    <p class="text-xs text-green-400 mt-2">✅ You should see <code class="bg-slate-800 px-1 rounded">"ok":true</code> and your webhook URL listed.</p>
+                    <p class="text-xs text-green-400 mt-2">✅ You should see <code
+                            class="bg-slate-800 px-1 rounded">"ok":true</code> and your webhook URL listed.</p>
                 </div>
 
                 <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-                    <p class="text-sm text-yellow-300"><strong>⚠️ Important:</strong> Your public URL must be HTTPS (Telegram requires it). If using a tunnel service, it provides HTTPS automatically.</p>
+                    <p class="text-sm text-yellow-300"><strong>⚠️ Important:</strong> Your public URL must be HTTPS
+                        (Telegram requires it). If using a tunnel service, it provides HTTPS automatically.</p>
                 </div>
 
                 <div class="text-center pt-4">
-                    <button onclick="closeWebhookGuide()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                    <button onclick="closeWebhookGuide()"
+                        class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
                         Got It!
                     </button>
                 </div>
@@ -1010,23 +1357,30 @@ cloudflared tunnel url hermitshell
     </div>
 
     <!-- Public URL Guide Modal -->
-    <div id="public-url-guide-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
+    <div id="public-url-guide-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50 sticky top-0">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <i data-lucide="globe" class="w-5 h-5 text-blue-500"></i>
                     Why Do I Need a Public URL?
                 </h3>
-                <button onclick="closePublicUrlGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closePublicUrlGuide()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
             </div>
             <div class="p-6 space-y-6 text-slate-300">
                 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                    <p class="text-sm text-blue-300"><strong>Short Answer:</strong> Telegram needs to send messages to your HermitShell server. Without a public URL, Telegram can't reach your server.</p>
+                    <p class="text-sm text-blue-300"><strong>Short Answer:</strong> Telegram needs to send messages to
+                        your HermitShell server. Without a public URL, Telegram can't reach your server.</p>
                 </div>
 
                 <div>
                     <h4 class="text-white font-bold mb-3">What is a Public URL?</h4>
-                    <p class="text-sm text-slate-400">A public URL is an internet address (like <code class="bg-slate-800 px-1 rounded">https://your-server.com</code>) that can be accessed from anywhere on the internet. It allows external services like Telegram to send data to your server.</p>
+                    <p class="text-sm text-slate-400">A public URL is an internet address (like <code
+                            class="bg-slate-800 px-1 rounded">https://your-server.com</code>) that can be accessed from
+                        anywhere on the internet. It allows external services like Telegram to send data to your server.
+                    </p>
                 </div>
 
                 <div>
@@ -1034,11 +1388,13 @@ cloudflared tunnel url hermitshell
                     <ul class="text-sm text-slate-400 space-y-2">
                         <li class="flex items-start gap-2">
                             <i data-lucide="check-circle" class="w-4 h-4 text-green-500 mt-0.5 shrink-0"></i>
-                            <span><strong>Telegram Webhooks:</strong> When someone messages your bot, Telegram sends the message to your public URL</span>
+                            <span><strong>Telegram Webhooks:</strong> When someone messages your bot, Telegram sends the
+                                message to your public URL</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <i data-lucide="check-circle" class="w-4 h-4 text-green-500 mt-0.5 shrink-0"></i>
-                            <span><strong>HITL Approvals:</strong> Approval requests from your agents are delivered via this URL</span>
+                            <span><strong>HITL Approvals:</strong> Approval requests from your agents are delivered via
+                                this URL</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <i data-lucide="check-circle" class="w-4 h-4 text-green-500 mt-0.5 shrink-0"></i>
@@ -1049,21 +1405,23 @@ cloudflared tunnel url hermitshell
 
                 <div>
                     <h4 class="text-white font-bold mb-3">How to Get a Public URL</h4>
-                    
+
                     <div class="space-y-4">
                         <div class="bg-slate-800/50 p-4 rounded-xl">
                             <h5 class="text-orange-400 font-semibold mb-2 flex items-center gap-2">
                                 <span class="bg-orange-600 text-xs px-2 py-0.5 rounded">EASIEST</span>
                                 Option 1: Tunnel Service (Free)
                             </h5>
-                            <p class="text-sm text-slate-400 mb-3">Best for development and testing. Creates a secure tunnel to your local machine.</p>
+                            <p class="text-sm text-slate-400 mb-3">Best for development and testing. Creates a secure
+                                tunnel to your local machine.</p>
                             <div class="bg-slate-900 p-3 rounded-lg font-mono text-xs space-y-2">
                                 <p class="text-slate-500"># Using Cloudflare Tunnel (recommended)</p>
                                 <p class="text-green-400">cloudflared tunnel --url http://localhost:3000</p>
                                 <p class="text-slate-500 mt-2"># Or using ngrok</p>
                                 <p class="text-green-400">ngrok http 3000</p>
                             </div>
-                            <p class="text-xs text-slate-500 mt-2">Copy the generated URL (e.g., <code class="bg-slate-800 px-1 rounded">https://random-name.trycloudflare.com</code>)</p>
+                            <p class="text-xs text-slate-500 mt-2">Copy the generated URL (e.g., <code
+                                    class="bg-slate-800 px-1 rounded">https://random-name.trycloudflare.com</code>)</p>
                         </div>
 
                         <div class="bg-slate-800/50 p-4 rounded-xl">
@@ -1071,12 +1429,14 @@ cloudflared tunnel url hermitshell
                                 <span class="bg-blue-600 text-xs px-2 py-0.5 rounded">PRODUCTION</span>
                                 Option 2: Cloud Server
                             </h5>
-                            <p class="text-sm text-slate-400 mb-3">For production deployments on VPS/cloud providers.</p>
+                            <p class="text-sm text-slate-400 mb-3">For production deployments on VPS/cloud providers.
+                            </p>
                             <ul class="text-sm text-slate-500 space-y-1">
                                 <li>• Rent a VPS (DigitalOcean, Linode, AWS, etc.)</li>
                                 <li>• Point a domain to your server's IP</li>
                                 <li>• Set up SSL with Let's Encrypt/Caddy</li>
-                                <li>• Use your domain: <code class="bg-slate-800 px-1 rounded">https://hermitshell.yourdomain.com</code></li>
+                                <li>• Use your domain: <code
+                                        class="bg-slate-800 px-1 rounded">https://hermitshell.yourdomain.com</code></li>
                             </ul>
                         </div>
 
@@ -1085,9 +1445,13 @@ cloudflared tunnel url hermitshell
                                 <span class="bg-purple-600 text-xs px-2 py-0.5 rounded">LOCAL</span>
                                 Option 3: Local Network Only
                             </h5>
-                            <p class="text-sm text-slate-400 mb-3">If you only need local access (no Telegram webhooks).</p>
-                            <p class="text-sm text-slate-500">Leave this field empty. You can still use the dashboard at <code class="bg-slate-800 px-1 rounded">http://localhost:3000</code></p>
-                            <p class="text-xs text-yellow-400 mt-2">⚠️ Telegram bots will NOT work without a public URL</p>
+                            <p class="text-sm text-slate-400 mb-3">If you only need local access (no Telegram webhooks).
+                            </p>
+                            <p class="text-sm text-slate-500">Leave this field empty. You can still use the dashboard at
+                                <code class="bg-slate-800 px-1 rounded">http://localhost:3000</code>
+                            </p>
+                            <p class="text-xs text-yellow-400 mt-2">⚠️ Telegram bots will NOT work without a public URL
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1096,30 +1460,36 @@ cloudflared tunnel url hermitshell
                     <h4 class="text-white font-bold mb-3">What You Need to Do</h4>
                     <ol class="text-sm text-slate-400 space-y-3">
                         <li class="flex gap-3">
-                            <span class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</span>
+                            <span
+                                class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</span>
                             <span>Run a tunnel service OR deploy to a cloud server with a domain</span>
                         </li>
                         <li class="flex gap-3">
-                            <span class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">2</span>
+                            <span
+                                class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">2</span>
                             <span>Copy your public HTTPS URL</span>
                         </li>
                         <li class="flex gap-3">
-                            <span class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">3</span>
+                            <span
+                                class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">3</span>
                             <span>Paste it in the PUBLIC_URL field and click "Save All Settings"</span>
                         </li>
                         <li class="flex gap-3">
-                            <span class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">4</span>
+                            <span
+                                class="bg-orange-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">4</span>
                             <span>Set up your Telegram webhook (see Webhook Guide in Settings)</span>
                         </li>
                     </ol>
                 </div>
 
                 <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                    <p class="text-sm text-green-300"><strong>✅ Requirements:</strong> The URL must be HTTPS (not HTTP). Telegram requires secure connections.</p>
+                    <p class="text-sm text-green-300"><strong>✅ Requirements:</strong> The URL must be HTTPS (not HTTP).
+                        Telegram requires secure connections.</p>
                 </div>
 
                 <div class="text-center pt-4">
-                    <button onclick="closePublicUrlGuide()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                    <button onclick="closePublicUrlGuide()"
+                        class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
                         Got It!
                     </button>
                 </div>
@@ -1128,33 +1498,45 @@ cloudflared tunnel url hermitshell
     </div>
 
     <!-- Add User to Allowlist Modal -->
-    <div id="allowlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative">
+    <div id="allowlist-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative">
             <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-5 h-5 text-orange-500"></i>
                     Add User to Allowlist
                 </h3>
-                <button onclick="closeAllowlistModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeAllowlistModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
             </div>
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">TELEGRAM USER ID *</label>
-                    <input type="number" id="allowlist-user-id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="e.g., 123456789">
-                    <p class="text-xs text-slate-500 mt-1">Ask the user to send /start to @userinfobot on Telegram to get their ID</p>
+                    <input type="number" id="allowlist-user-id"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                        placeholder="e.g., 123456789">
+                    <p class="text-xs text-slate-500 mt-1">Ask the user to send /start to @userinfobot on Telegram to
+                        get their ID</p>
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">USERNAME (optional)</label>
-                    <input type="text" id="allowlist-username" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="@username">
+                    <input type="text" id="allowlist-username"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                        placeholder="@username">
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-400 mb-1">FIRST NAME (optional)</label>
-                    <input type="text" id="allowlist-first-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors" placeholder="John">
+                    <input type="text" id="allowlist-first-name"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
+                        placeholder="John">
                 </div>
             </div>
             <div class="p-6 pt-0 flex justify-end gap-3">
-                <button onclick="closeAllowlistModal()" class="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                <button onclick="addAllowlistUser()" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                <button onclick="closeAllowlistModal()"
+                    class="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
+                <button onclick="addAllowlistUser()"
+                    class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-all">
                     Add User
                 </button>
             </div>
@@ -1163,8 +1545,10 @@ cloudflared tunnel url hermitshell
 
 
     <!-- Agent Chat Modal -->
-    <div id="agent-chat-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="tele-chat-bg border border-slate-700 w-full max-w-2xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div id="agent-chat-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div
+            class="tele-chat-bg border border-slate-700 w-full max-w-2xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div class="p-4 border-b border-slate-700/80 bg-slate-900/70 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <img id="agent-chat-avatar" class="agent-avatar" alt="Agent avatar">
@@ -1173,14 +1557,22 @@ cloudflared tunnel url hermitshell
                         <p class="text-xs text-slate-400">HermitShell secure line</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2"><button onclick="clearAgentChatHistory()" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded text-slate-200 hover:bg-slate-700">Clear</button><button onclick="closeAgentChatModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+                <div class="flex items-center gap-2"><button onclick="clearAgentChatHistory()"
+                        class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded text-slate-200 hover:bg-slate-700">Clear</button><button
+                        onclick="closeAgentChatModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                            class="w-5 h-5"></i></button></div>
             </div>
             <div id="agent-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
             <div class="p-4 border-t border-slate-700/80 bg-slate-900/60">
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
-                    <input id="agent-chat-user-id" type="number" onchange="loadAgentChatHistory()" class="md:col-span-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="User ID">
-                    <input id="agent-chat-input" class="md:col-span-3 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white" placeholder="Message...">
-                    <button onclick="sendAgentChatMessage()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm">Send</button>
+                    <input id="agent-chat-user-id" type="number" onchange="loadAgentChatHistory()"
+                        class="md:col-span-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+                        placeholder="User ID">
+                    <input id="agent-chat-input"
+                        class="md:col-span-3 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+                        placeholder="Message...">
+                    <button onclick="sendAgentChatMessage()"
+                        class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm">Send</button>
                 </div>
             </div>
         </div>
@@ -1250,7 +1642,7 @@ cloudflared tunnel url hermitshell
             try {
                 const res = await fetch('/api/auth/status');
                 const data = await res.json();
-                
+
                 if (data.status === 'authenticated') {
                     window.usingDefaultCreds = data.usingDefault;
                     showDashboard();
@@ -1269,7 +1661,7 @@ cloudflared tunnel url hermitshell
             document.getElementById('dashboard-ui').classList.add('hidden');
             document.getElementById('auth-title').innerText = title;
             document.getElementById('auth-btn').innerText = btnText;
-            
+
             if (usingDefault) {
                 document.getElementById('default-login-hint').classList.remove('hidden');
                 document.getElementById('default-creds-display').classList.remove('hidden');
@@ -1282,7 +1674,7 @@ cloudflared tunnel url hermitshell
         function showDashboard() {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard-ui').classList.remove('hidden');
-            
+
             if (window.usingDefaultCreds) {
                 document.getElementById('default-creds-warning').classList.remove('hidden');
                 document.getElementById('settings-creds-warning').classList.remove('hidden');
@@ -1294,13 +1686,13 @@ cloudflared tunnel url hermitshell
                 document.getElementById('admin-creds-card').classList.remove('border-red-500/50');
                 document.getElementById('admin-creds-card').classList.add('border-slate-700/50');
             }
-            
+
             loadStats();
             loadAgents();
             loadAuditLogs();
-            setInterval(() => { 
-                loadStats(); 
-                loadAgents(); 
+            setInterval(() => {
+                loadStats();
+                loadAgents();
             }, 10000);
         }
 
@@ -1322,6 +1714,7 @@ cloudflared tunnel url hermitshell
             document.getElementById('section-cubicles').classList.add('hidden');
             document.getElementById('section-sites').classList.add('hidden');
             document.getElementById('section-files').classList.add('hidden');
+            document.getElementById('section-memories').classList.add('hidden');
             document.getElementById('section-' + section).classList.remove('hidden');
 
             const titles = {
@@ -1332,7 +1725,8 @@ cloudflared tunnel url hermitshell
                 'metrics': 'System Metrics',
                 'allowlist': 'User Allowlist',
                 'sites': 'Sites',
-                'files': 'Files'
+                'files': 'Files',
+                'memories': 'Agent Memories'
             };
             document.getElementById('page-title').innerText = titles[section] || 'Mission Control';
 
@@ -1343,6 +1737,7 @@ cloudflared tunnel url hermitshell
             if (section === 'cubicles') loadCubicles();
             if (section === 'sites') loadSites();
             if (section === 'files') loadFilesSection();
+            if (section === 'memories') loadMemoriesSection();
         }
 
         const PROVIDER_MODELS = {
@@ -1416,10 +1811,10 @@ cloudflared tunnel url hermitshell
             const provider = document.getElementById('setting-default_provider').value;
             const modelSelect = document.getElementById('setting-default_model');
             const customInput = document.getElementById('setting-custom_model');
-            
+
             modelSelect.innerHTML = '';
             const models = PROVIDER_MODELS[provider] || [];
-            
+
             models.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model.value;
@@ -1435,7 +1830,7 @@ cloudflared tunnel url hermitshell
                     customInput.classList.add('hidden');
                 }
             };
-            
+
             customInput.classList.add('hidden');
         }
 
@@ -1443,17 +1838,17 @@ cloudflared tunnel url hermitshell
             const provider = document.getElementById('new-llm-provider').value;
             const modelSelect = document.getElementById('new-llm-model');
             const customInput = document.getElementById('new-llm-model-custom');
-            
+
             if (provider === 'default') {
                 modelSelect.innerHTML = '<option value="">Use System Default</option>';
                 modelSelect.classList.remove('hidden');
                 customInput.classList.add('hidden');
                 return;
             }
-            
+
             modelSelect.innerHTML = '';
             const models = PROVIDER_MODELS[provider] || [];
-            
+
             models.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model.value;
@@ -1471,7 +1866,7 @@ cloudflared tunnel url hermitshell
                     customInput.classList.add('hidden');
                 }
             };
-            
+
             customInput.classList.add('hidden');
             modelSelect.classList.remove('hidden');
         }
@@ -1493,12 +1888,12 @@ cloudflared tunnel url hermitshell
                 // Provider and model
                 document.getElementById('setting-default_provider').value = settings.default_provider || 'openrouter';
                 updateModelOptions();
-                
+
                 const modelSelect = document.getElementById('setting-default_model');
                 const savedModel = settings.default_model || 'auto';
                 const models = PROVIDER_MODELS[settings.default_provider] || [];
                 const modelExists = models.some(m => m.value === savedModel);
-                
+
                 if (modelExists) {
                     modelSelect.value = savedModel;
                 } else if (savedModel) {
@@ -1528,8 +1923,8 @@ cloudflared tunnel url hermitshell
                 hitl_enabled: document.getElementById('setting-hitl_enabled').checked ? 'true' : 'false',
                 default_daily_limit: document.getElementById('setting-default_daily_limit').value,
                 default_provider: document.getElementById('setting-default_provider').value,
-                default_model: document.getElementById('setting-default_model').value === '__custom__' 
-                    ? document.getElementById('setting-custom_model').value 
+                default_model: document.getElementById('setting-default_model').value === '__custom__'
+                    ? document.getElementById('setting-custom_model').value
                     : document.getElementById('setting-default_model').value,
                 openrouter_api_key: document.getElementById('setting-openrouter_api_key').value,
                 openai_api_key: document.getElementById('setting-openai_api_key').value,
@@ -1547,7 +1942,7 @@ cloudflared tunnel url hermitshell
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
                 });
-                
+
                 if (res.ok) {
                     alert('Settings saved successfully!');
                 } else {
@@ -1561,22 +1956,22 @@ cloudflared tunnel url hermitshell
         async function changeAdminCredentials() {
             const username = document.getElementById('setting-admin-username').value;
             const password = document.getElementById('setting-admin-password').value;
-            
+
             if (!username || !password) {
                 return alert('Both username and password are required');
             }
-            
+
             if (username === 'admin' && password === 'crab123') {
                 return alert('Please enter a secure password different from the default.');
             }
-            
+
             try {
                 const res = await fetch('/api/auth/change', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 if (res.ok) {
                     alert('Credentials updated successfully! Please log in again.');
                     window.location.reload();
@@ -1595,7 +1990,7 @@ cloudflared tunnel url hermitshell
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('auth-error');
             const btn = document.getElementById('auth-btn');
-            
+
             errorDiv.classList.add('hidden');
             btn.disabled = true;
             btn.innerText = 'Authenticating...';
@@ -1607,7 +2002,7 @@ cloudflared tunnel url hermitshell
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await res.json();
                 console.log('Login response:', res.status, data);
 
@@ -1639,18 +2034,18 @@ cloudflared tunnel url hermitshell
         async function loadStats() {
             try {
                 const res = await fetch('/api/stats');
-                if(res.status === 401) return logout();
+                if (res.status === 401) return logout();
                 const data = await res.json();
                 document.getElementById('stat-containers').innerText = data.activeContainers;
                 document.getElementById('stat-agents').innerText = data.totalAgents;
                 document.getElementById('stat-spend').innerText = '$' + data.totalSpendToday.toFixed(4);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         async function loadCubicles() {
             try {
                 const res = await fetch('/api/containers');
-                if(res.status === 401) return logout();
+                if (res.status === 401) return logout();
                 const containers = await res.json();
                 const tbody = document.getElementById('cubicles-tbody');
                 const empty = document.getElementById('cubicles-empty');
@@ -1668,9 +2063,9 @@ cloudflared tunnel url hermitshell
                 tbody.innerHTML = hermitContainers.map(c => {
                     const statusColor = c.State === 'running' ? 'text-green-400' : c.State === 'exited' ? 'text-red-400' : 'text-yellow-400';
                     const statusIcon = c.State === 'running' ? '●' : '○';
-                    
+
                     const name = c.Names && c.Names[0] ? c.Names[0].replace('/', '') : 'cubicle';
-                    
+
                     return `
                         <tr class="hover:bg-white/5">
                             <td class="px-4 py-3 font-mono text-slate-400">
@@ -1682,9 +2077,9 @@ cloudflared tunnel url hermitshell
                             <td class="px-4 py-3 text-slate-400">${c.Status}</td>
                             <td class="px-4 py-3 flex gap-2">
                                 <button onclick="viewContainer('${c.Id}')" class="text-orange-500 hover:text-white text-xs">Terminal</button>
-                                ${c.State === 'running' 
-                                    ? `<button onclick="stopContainer('${c.Id}')" class="text-yellow-400 hover:text-white text-xs">Stop</button>` 
-                                    : `<button onclick="startContainer('${c.Id}')" class="text-green-400 hover:text-white text-xs">Start</button>`}
+                                ${c.State === 'running'
+                            ? `<button onclick="stopContainer('${c.Id}')" class="text-yellow-400 hover:text-white text-xs">Stop</button>`
+                            : `<button onclick="startContainer('${c.Id}')" class="text-green-400 hover:text-white text-xs">Start</button>`}
                                 <button onclick="deleteContainer('${c.Id}')" class="text-red-400 hover:text-white text-xs">Delete</button>
                             </td>
                         </tr>
@@ -1766,13 +2161,13 @@ cloudflared tunnel url hermitshell
                 openaiStatus.innerText = openaiSet ? 'Set' : 'Not Set';
                 openrouterStatus.className = `text-xs font-mono px-2 py-1 rounded ${openrouterSet ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
                 openrouterStatus.innerText = openrouterSet ? 'Set' : 'Not Set';
-            } catch (e) {}
+            } catch (e) { }
         }
 
         async function loadAllowlist() {
             try {
                 const res = await fetch('/api/allowlist');
-                if(res.status === 401) return logout();
+                if (res.status === 401) return logout();
                 const users = await res.json();
                 const tbody = document.getElementById('allowlist-tbody');
                 const empty = document.getElementById('allowlist-empty');
@@ -1976,7 +2371,7 @@ cloudflared tunnel url hermitshell
 
         async function loadAgents() {
             const grid = document.getElementById('agent-grid');
-            
+
             if (!cachedAgents || cachedAgents.length === 0) {
                 grid.innerHTML = `
                 <div class="skeleton-card w-full">
@@ -2043,12 +2438,12 @@ cloudflared tunnel url hermitshell
                     </div>
                 </div>`;
             }
-            
+
             try {
                 const res = await fetch('/api/agents');
-                if(res.status === 401) return logout();
+                if (res.status === 401) return logout();
                 const agents = await res.json();
-                
+
                 let newHTML = '';
 
                 agents.forEach(agent => {
@@ -2101,7 +2496,7 @@ cloudflared tunnel url hermitshell
                 cachedAgents = agents;
                 if (!document.getElementById('section-sites').classList.contains('hidden')) loadSites();
                 if (!document.getElementById('section-files').classList.contains('hidden')) loadFilesSection();
-            } catch(e) {}
+            } catch (e) { }
         }
 
         function flattenWorkspace(items = [], depth = 0) {
@@ -2192,7 +2587,7 @@ cloudflared tunnel url hermitshell
                     const indent = '&nbsp;'.repeat(item.depth * 4);
                     const icon = item.type === 'directory' ? '📁' : '📄';
                     const download = item.type === 'file'
-                        ? `<a href="/api/files/${agentId}/${userId}/download/${item.path}" class="text-orange-400 hover:text-orange-300 text-xs ml-2">download</a>`
+                        ? `<a href="/api/files/${agentId}/${userId}/download/${item.path}?token=${getStoredSessionToken()}" class="text-orange-400 hover:text-orange-300 text-xs ml-2">download</a>`
                         : '';
                     return `<div class="py-1 border-b border-slate-800/70 last:border-b-0 mono text-xs">${indent}${icon} ${item.path}${download}</div>`;
                 }).join('');
@@ -2205,7 +2600,7 @@ cloudflared tunnel url hermitshell
         async function loadAuditLogs() {
             try {
                 const res = await fetch('/api/audit?limit=50');
-                if(res.status === 401) return logout();
+                if (res.status === 401) return logout();
                 const logs = await res.json();
                 const agents = await fetch('/api/agents').then(r => r.json());
                 const agentMap = {};
@@ -2230,7 +2625,7 @@ cloudflared tunnel url hermitshell
                     `;
                     tbody.innerHTML += row;
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error('Failed to load audit logs:', e);
             }
         }
@@ -2240,7 +2635,7 @@ cloudflared tunnel url hermitshell
                 btn.disabled = true;
                 btn.innerHTML = '<svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Loading...</span>';
             }
-            
+
             let agent = cachedAgents.find(a => a.id === id);
             if (!agent) {
                 const agents = await fetch('/api/agents').then(r => r.json());
@@ -2280,7 +2675,7 @@ cloudflared tunnel url hermitshell
                 document.getElementById('create-modal').classList.remove('hidden');
                 lucide.createIcons();
             }
-            
+
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i data-lucide="settings" class="w-3 h-3"></i><span>Edit</span>';
@@ -2290,7 +2685,7 @@ cloudflared tunnel url hermitshell
 
         async function deleteAgent(id, name) {
             if (!confirm(`Delete agent "${name}"? This cannot be undone.`)) return;
-            
+
             try {
                 const res = await fetch(`/api/agents/${id}`, { method: 'DELETE' });
                 if (res.ok) {
@@ -2338,7 +2733,7 @@ cloudflared tunnel url hermitshell
             } catch (e) {
                 document.getElementById('test-loading').classList.add('hidden');
                 document.getElementById('test-content').classList.remove('hidden');
-                
+
                 const outputEl = document.getElementById('test-output');
                 outputEl.innerText = 'Failed to test agent: ' + e.message;
                 outputEl.classList.add('text-red-400');
@@ -2361,7 +2756,7 @@ cloudflared tunnel url hermitshell
             try {
                 const res = await fetch('/api/settings');
                 const settings = await res.json();
-                
+
                 if (!settings.operator_telegram_id || !settings.public_url) {
                     alert('⚠️ Action Required\n\nPlease set both your "Operator Telegram ID" and "Public URL" in the Settings tab before spawning an agent. Telegram needs the Public URL to push messages to your bot.');
                     showSection('settings');
@@ -2497,11 +2892,11 @@ cloudflared tunnel url hermitshell
             const btn = event.currentTarget;
             const icon = btn.querySelector('i');
             icon.classList.add('animate-spin');
-            
+
             try {
                 const res = await fetch('/api/webhooks/sync', { method: 'POST' });
                 const data = await res.json();
-                
+
                 if (res.ok) {
                     alert(`✅ Successfully synced ${data.count} of ${data.total} active bots with Telegram.`);
                 } else {
@@ -2524,12 +2919,12 @@ cloudflared tunnel url hermitshell
         function handleDigitInput(input, index) {
             const value = input.value.replace(/[^0-9]/g, '');
             input.value = value;
-            
+
             if (value && index < 5) {
                 const digits = document.querySelectorAll('.verification-digit');
                 digits[index + 1].focus();
             }
-            
+
             const digits = document.querySelectorAll('.verification-digit');
             const code = Array.from(digits).map(d => d.value).join('');
             if (code.length === 6) {
@@ -2559,11 +2954,11 @@ cloudflared tunnel url hermitshell
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token })
                 });
-                
+
                 const data = await res.json();
-                
+
                 document.getElementById('send-code-loading').classList.add('hidden');
-                
+
                 if (res.ok && data.success) {
                     pendingVerificationToken = token;
                     document.getElementById('send-code-success').classList.remove('hidden');
@@ -2590,7 +2985,7 @@ cloudflared tunnel url hermitshell
             btn.disabled = true;
             btn.classList.add('opacity-75', 'cursor-not-allowed');
             btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Saving...</span>';
-            
+
             const name = document.getElementById('new-name').value.trim();
             const role = document.getElementById('new-role').value.trim();
             const image = document.getElementById('new-image').value;
@@ -2649,7 +3044,7 @@ cloudflared tunnel url hermitshell
 
             const digits = document.querySelectorAll('.verification-digit');
             const code = Array.from(digits).map(d => d.value).join('');
-            
+
             if (code.length !== 6) {
                 return alert('Please enter all 6 digits');
             }
@@ -2681,11 +3076,11 @@ cloudflared tunnel url hermitshell
                         }
                     })
                 });
-                
+
                 const data = await res.json();
-                
+
                 document.getElementById('verify-loading').classList.add('hidden');
-                
+
                 if (res.ok && data.success) {
                     document.getElementById('verify-success').classList.remove('hidden');
                     setTimeout(() => {
@@ -2825,10 +3220,10 @@ cloudflared tunnel url hermitshell
 
         async function viewRuntimeLogs(agentId, agentName) {
             const userId = 123456789;
-            
+
             document.getElementById('term-title').innerText = `logs: ${agentName.toLowerCase()}.log`;
             document.getElementById('terminal-modal').classList.remove('hidden');
-            
+
             if (!term) {
                 term = new Terminal({
                     cursorBlink: true,
@@ -2845,10 +3240,10 @@ cloudflared tunnel url hermitshell
                 term.open(document.getElementById('xterm-container'));
                 fitAddon.fit();
             }
-            
+
             term.clear();
             term.writeln(`\x1b[34m-- Fetching runtime logs for ${agentName} --\x1b[0m`);
-            
+
             try {
                 const res = await fetch(`/api/agents/${agentId}/runtime-logs/${userId}`);
                 const data = await res.json();
@@ -2856,6 +3251,116 @@ cloudflared tunnel url hermitshell
                 term.write(cleanLogs);
             } catch (e) {
                 term.writeln(`\x1b[31mError: ${e.message}\x1b[0m`);
+            }
+        }
+
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const res = await fetch(endpoint, options);
+                if (res.status === 401 || res.status === 403) {
+                    showAuthScreen();
+                    throw new Error('Unauthorized');
+                }
+                return await res.json();
+            } catch (err) {
+                console.error('API Error:', err);
+                return { error: err.message };
+            }
+        }
+
+        async function loadMemoriesSection() {
+            try {
+                const res = await fetchAPI('/api/agents');
+                if (res.agents) {
+                    const select = document.getElementById('memory-agent-select');
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">Select an agent...</option>';
+                    res.agents.forEach(a => {
+                        select.innerHTML += `<option value="${a.id}">${a.name} (${a.role})</option>`;
+                    });
+                    if (currentValue && res.agents.find(a => a.id == currentValue)) {
+                        select.value = currentValue;
+                        loadAgentMemories();
+                    } else if (res.agents.length > 0) {
+                        select.value = res.agents[0].id;
+                        loadAgentMemories();
+                    }
+                }
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadAgentMemories() {
+            const agentId = document.getElementById('memory-agent-select').value;
+            if (!agentId) return;
+
+            try {
+                const res = await fetchAPI(`/api/agents/${agentId}/memory`);
+                const tbody = document.getElementById('memories-tbody');
+                const empty = document.getElementById('memories-empty');
+
+                if (res.memories && res.memories.length > 0) {
+                    tbody.innerHTML = res.memories.map(m => `
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-4 py-4 text-slate-300 align-top">${m.content}</td>
+                            <td class="px-4 py-4 text-right align-top">
+                                <button onclick="deleteAgentMemory(${m.id})" class="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded transition-colors text-xs font-bold">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    empty.classList.add('hidden');
+                } else {
+                    tbody.innerHTML = '';
+                    empty.classList.remove('hidden');
+                }
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function addAgentMemory() {
+            const agentId = document.getElementById('memory-agent-select').value;
+            const input = document.getElementById('new-memory-input');
+            const content = input.value.trim();
+
+            if (!agentId) return alert('Please select an agent first.');
+            if (!content) return;
+
+            try {
+                const res = await fetchAPI(`/api/agents/${agentId}/memory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                if (res.success) {
+                    input.value = '';
+                    loadAgentMemories();
+                } else {
+                    alert('Failed to add memory: ' + (res.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteAgentMemory(memoryId) {
+            const agentId = document.getElementById('memory-agent-select').value;
+            if (!agentId || !confirm('Are you sure you want to delete this memory?')) return;
+
+            try {
+                const res = await fetchAPI(`/api/agents/${agentId}/memory/${memoryId}`, {
+                    method: 'DELETE'
+                });
+                if (res.success) {
+                    loadAgentMemories();
+                } else {
+                    alert('Failed to delete memory: ' + (res.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error(e);
             }
         }
 
@@ -2890,7 +3395,7 @@ cloudflared tunnel url hermitshell
             const agentId = document.getElementById('files-agent').value;
             const userId = document.getElementById('files-user').value;
             if (!agentId || !userId) return;
-            window.open(`/api/files/${agentId}/${userId}/download-all`, '_blank');
+            window.open(`/api/files/${agentId}/${userId}/download-all?token=${getStoredSessionToken()}`, '_blank');
         }
 
         async function uploadWorkspaceFile(event) {
@@ -2918,4 +3423,5 @@ cloudflared tunnel url hermitshell
         init();
     </script>
 </body>
+
 </html>

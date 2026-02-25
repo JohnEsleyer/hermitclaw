@@ -1,5 +1,5 @@
-import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands, registerWebhook } from './telegram';
-import { 
+import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands, registerWebhook, startFileWatcher } from './telegram';
+import {
     getAllAgents, isAllowed, initDb, getAdminCount, createAdmin, getAdmin, getFirstAdmin, updateAdmin,
     getAllSettings, setSetting, getBudget, getAllowlist, addToAllowlist, removeFromAllowlist,
     getTotalSpend, getAllBudgets, updateAgent, deleteAgent, updateBudget, createAgent,
@@ -29,8 +29,44 @@ export function setPreviewPassword(agentId: number, port: number, pass: string) 
 
 export async function startServer() {
     await initDb();
-    
+    startFileWatcher();
+
     const fastify = require('fastify')({ logger: true });
+
+    fastify.get('/api/agents/:id/memory', async (request: any, reply: any) => {
+        try {
+            const agentId = Number(request.params.id);
+            const { getAgentMemories } = require('./db');
+            const memories = await getAgentMemories(agentId, 50);
+            return { memories };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
+    fastify.post('/api/agents/:id/memory', async (request: any, reply: any) => {
+        try {
+            const agentId = Number(request.params.id);
+            const { content } = request.body;
+            if (!content) return reply.code(400).send({ error: 'Missing content' });
+            const { storeMemory } = require('./db');
+            const id = await storeMemory(agentId, content, [0]);
+            return { success: true, memoryId: id };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
+    fastify.delete('/api/agents/:agentId/memory/:memoryId', async (request: any, reply: any) => {
+        try {
+            const memoryId = Number(request.params.memoryId);
+            const { deleteMemory } = require('./db');
+            await deleteMemory(memoryId);
+            return { success: true };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
 
     await fastify.register(cookie);
 
@@ -54,6 +90,9 @@ export async function startServer() {
             return authHeader.slice(7).trim();
         }
 
+        const queryToken = request.query?.token;
+        if (typeof queryToken === 'string') return queryToken;
+
         return undefined;
     };
 
@@ -61,7 +100,8 @@ export async function startServer() {
         if (request.url.startsWith('/webhook/')) return;
         if (request.url.startsWith('/api/terminal')) return;
         if (request.url.startsWith('/preview')) return;
-        
+        if (request.url.includes('/api/internal/')) return;
+
         if (publicRoutes.includes(request.url)) return;
 
         if (request.url.startsWith('/dashboard') || request.url === '/') return;
@@ -82,19 +122,19 @@ export async function startServer() {
             await createAdmin('admin', hash, salt);
             console.log('🔒 Initialized default admin credentials: admin / crab123');
         }
-        
+
         const admin = await getFirstAdmin();
         let usingDefault = false;
         if (admin) {
             usingDefault = admin.username === 'admin' && verifyPassword('crab123', admin.password_hash, admin.salt);
         }
-        
+
         const operator = await getOperator();
         const token = getSessionToken(request);
         if (token) {
             return { status: 'authenticated', hasOperator: !!operator, usingDefault };
         }
-        
+
         return { status: 'login_required', hasOperator: !!operator, usingDefault };
     });
 
@@ -107,7 +147,7 @@ export async function startServer() {
         }
 
         const token = generateSessionToken(admin.id);
-        
+
         reply.setCookie('hermitshell_session', token, {
             path: '/',
             httpOnly: true,
@@ -127,7 +167,7 @@ export async function startServer() {
     fastify.post('/api/auth/change', async (request: any, reply: any) => {
         const { username, password } = request.body;
         if (!username || !password) return reply.code(400).send({ error: 'Username and password are required' });
-        
+
         const admin = await getFirstAdmin();
         if (admin) {
             const { hash, salt } = hashPassword(password);
@@ -140,8 +180,8 @@ export async function startServer() {
 
     fastify.get('/health', async () => {
         const dockerOk = await checkDocker();
-        return { 
-            status: 'ok', 
+        return {
+            status: 'ok',
             timestamp: new Date().toISOString(),
             docker: dockerOk ? 'online' : 'offline'
         };
@@ -154,7 +194,7 @@ export async function startServer() {
         const totalSpend = await getTotalSpend();
         const allowlist = await getAllowlist();
         const operator = await getOperator();
-        
+
         const auditLogs = await getAuditLogs(undefined, 500);
         const runtimeLogs = await getAgentRuntimeLogs(undefined, 500);
         const errors24h = runtimeLogs.filter(l => l.level === 'error').length;
@@ -199,7 +239,7 @@ export async function startServer() {
             if (value !== undefined && value !== null) {
                 const valStr = String(value).trim();
                 await setSetting(key, valStr);
-                
+
                 if (key === 'operator_telegram_id' && valStr) {
                     await addToAllowlist(Number(valStr), 'operator', 'Operator', true);
                     await setOperator(Number(valStr));
@@ -217,14 +257,14 @@ export async function startServer() {
         const { user_id, username, first_name, is_operator } = request.body;
         if (!user_id) return { error: 'user_id required' };
         await addToAllowlist(Number(user_id), username, first_name, is_operator === true);
-        
+
         if (is_operator) {
             await setOperator(Number(user_id));
         }
-        
+
         return { success: true };
     });
-    
+
     fastify.post('/api/allowlist/set-operator/:userId', async (request: any) => {
         const userId = Number(request.params.userId);
         await setOperator(userId);
@@ -251,13 +291,13 @@ export async function startServer() {
     fastify.post('/api/telegram/webhook', async (request: any, reply: any) => {
         const { token } = request.body;
         if (!token) return reply.code(400).send({ error: 'Token required' });
-        
+
         const settings = await getAllSettings();
         const baseUrl = settings.public_url;
-        
+
         if (!baseUrl || baseUrl === '') {
-            return reply.code(400).send({ 
-                error: 'Public URL not configured. Please set your public URL in Settings first.' 
+            return reply.code(400).send({
+                error: 'Public URL not configured. Please set your public URL in Settings first.'
             });
         }
 
@@ -272,60 +312,60 @@ export async function startServer() {
     fastify.post('/api/webhooks/sync', async (_request: any, reply: any) => {
         const settings = await getAllSettings();
         const baseUrl = settings.public_url;
-        
+
         if (!baseUrl) {
             return reply.code(400).send({ error: 'Public URL not configured. Set it in Settings first.' });
         }
 
         const agents = await getAllAgents();
         let successCount = 0;
-        
+
         for (const agent of agents) {
             if (agent.is_active && agent.telegram_token) {
-                console.log(`[Webhook] Syncing bot ${agent.name} (${agent.telegram_token.slice(0,8)}...)`);
+                console.log(`[Webhook] Syncing bot ${agent.name} (${agent.telegram_token.slice(0, 8)}...)`);
                 const ok = await registerWebhook(agent.telegram_token, baseUrl, WEBHOOK_SECRET);
                 if (ok) successCount++;
             }
         }
-        
+
         return { success: true, count: successCount, total: agents.length };
     });
 
     fastify.post('/api/webhooks/reset/:agentId', async (request: any, reply: any) => {
         const agentId = Number(request.params.agentId);
         const agent = await getAgentById(agentId);
-        
+
         if (!agent || !agent.telegram_token) {
             return reply.code(404).send({ error: 'Agent or token not found' });
         }
-        
+
         const settings = await getAllSettings();
         if (!settings.public_url) {
             return reply.code(400).send({ error: 'Public URL not configured' });
         }
-        
+
         console.log(`[Webhook] Resetting webhook for agent ${agent.name}`);
         const ok = await registerWebhook(agent.telegram_token, settings.public_url, WEBHOOK_SECRET);
-        
+
         return { success: ok };
     });
 
     fastify.get('/api/agents', async () => {
         const agents = await getAllAgents();
         const budgets = await getAllBudgets();
-        
+
         return agents.map(agent => {
             const budget = budgets.find(b => b.agent_id === agent.id);
             return {
                 ...agent,
-                budget: budget || { daily_limit_usd: 1, current_spend_usd:0 }
+                budget: budget || { daily_limit_usd: 1, current_spend_usd: 0 }
             };
         });
     });
 
     fastify.post('/api/agents/request-verification', async (request: any, reply: any) => {
         const { token } = request.body;
-        
+
         const operatorId = await getSetting('operator_telegram_id');
         if (!operatorId) {
             return reply.code(400).send({ error: 'Operator Telegram ID not set. Please configure it in Settings or during initial setup.' });
@@ -347,18 +387,18 @@ export async function startServer() {
 
     fastify.post('/api/agents/confirm-verification', async (request: any, reply: any) => {
         const { token, code, agentData, editAgentId } = request.body;
-        
+
         const pending = pendingVerifications.get(token);
-        
+
         if (!pending) {
             return reply.code(400).send({ error: 'No pending verification for this token. Please request a new verification code.' });
         }
-        
+
         if (Date.now() - pending.timestamp > 10 * 60 * 1000) {
             pendingVerifications.delete(token);
             return reply.code(400).send({ error: 'Verification code expired. Please request a new one.' });
         }
-        
+
         if (pending.code !== code) {
             return reply.code(400).send({ error: 'Invalid verification code.' });
         }
@@ -392,13 +432,13 @@ export async function startServer() {
                     llm_provider: agentData.llm_provider || 'default',
                     llm_model: agentData.llm_model || 'default'
                 });
-                
+
                 const settings = await getAllSettings();
                 if (settings.public_url) {
                     await registerWebhook(token, settings.public_url, WEBHOOK_SECRET);
                 }
             }
-            
+
             pendingVerifications.delete(token);
             return { success: true, id };
         } catch (e: any) {
@@ -427,13 +467,13 @@ export async function startServer() {
     fastify.put('/api/agents/:id', async (request: any) => {
         const id = Number(request.params.id);
         const { name, role, telegram_token, docker_image, system_prompt, is_active, daily_limit_usd, require_approval, profile_picture_url, profile_bio, llm_provider, llm_model } = request.body;
-        
-        await updateAgent(id, { 
-            name, 
-            role, 
-            telegram_token, 
-            docker_image, 
-            system_prompt, 
+
+        await updateAgent(id, {
+            name,
+            role,
+            telegram_token,
+            docker_image,
+            system_prompt,
             is_active,
             require_approval,
             profile_picture_url,
@@ -441,15 +481,15 @@ export async function startServer() {
             llm_provider,
             llm_model
         });
-        
+
         if (daily_limit_usd !== undefined) {
             await updateBudget(id, daily_limit_usd);
         }
-        
+
         if (llm_provider !== undefined || llm_model !== undefined) {
             await restartAgentContainer(id);
         }
-        
+
         return { success: true };
     });
 
@@ -463,7 +503,7 @@ export async function startServer() {
     fastify.post('/api/test-agent/:id', async (request: any, reply: any) => {
         const agentId = Number(request.params.id);
         const { message } = request.body;
-        
+
         const agent = await getAgentById(agentId);
         if (!agent) {
             return reply.code(404).send({ error: 'Agent not found' });
@@ -480,7 +520,7 @@ export async function startServer() {
                 maxTokens: 1000,
                 requireApproval: false
             });
-            
+
             if (result.output.includes('401') && (result.output.includes('Unauthorized') || result.output.includes('Authentication'))) {
                 result.output = `❌ API Key Error (401 Unauthorized)\n\nYour API key is missing or invalid.\n\nHow to fix:\n1. Go to Settings -> API Keys\n2. Enter a valid key and click Save\n3. Go to Cubicles tab and Delete the existing container\n4. Try testing again.`;
             }
@@ -554,6 +594,91 @@ export async function startServer() {
         return { success: true };
     });
 
+    fastify.post('/api/internal/llm', async (request: any, reply: any) => {
+        try {
+            const { messages, agentId } = request.body;
+            if (!messages || !agentId) return reply.code(400).send({ error: 'Missing messages or agentId' });
+
+            const agent = await getAgentById(Number(agentId));
+            if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+
+            const settings = await getAllSettings();
+            const provider = agent.llm_provider && agent.llm_provider !== 'default' ? agent.llm_provider : (settings.default_provider || 'openrouter');
+            const model = agent.llm_model && agent.llm_model !== 'default' ? agent.llm_model : (settings.default_model || 'auto');
+
+            const providerKeyMap: Record<string, { key: string; env: string }> = {
+                'openai': { key: 'openai_api_key', env: 'OPENAI_API_KEY' },
+                'anthropic': { key: 'anthropic_api_key', env: 'ANTHROPIC_API_KEY' },
+                'google': { key: 'google_api_key', env: 'GOOGLE_API_KEY' },
+                'groq': { key: 'groq_api_key', env: 'GROQ_API_KEY' },
+                'openrouter': { key: 'openrouter_api_key', env: 'OPENROUTER_API_KEY' },
+                'mistral': { key: 'mistral_api_key', env: 'MISTRAL_API_KEY' },
+                'deepseek': { key: 'deepseek_api_key', env: 'DEEPSEEK_API_KEY' },
+                'xai': { key: 'xai_api_key', env: 'XAI_API_KEY' },
+            };
+
+            const apiKey = settings[providerKeyMap[provider]?.key] || process.env[providerKeyMap[provider]?.env];
+
+            if (!apiKey) {
+                return { output: `❌ **SYSTEM ERROR**: Missing API Key for '${provider}'.` };
+            }
+
+            let url = '';
+            let headers: any = { 'Content-Type': 'application/json' };
+            let body: any = { messages, max_tokens: 4000 };
+
+            if (provider === 'google') {
+                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                const mappedMessages = messages.map((m: any) => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }));
+                body = { contents: mappedMessages };
+                const sysMsg = messages.find((m: any) => m.role === 'system');
+                if (sysMsg) {
+                    body.systemInstruction = { parts: [{ text: sysMsg.content }] };
+                    body.contents = body.contents.filter((m: any) => m.role !== 'system');
+                }
+            } else if (provider === 'anthropic') {
+                url = 'https://api.anthropic.com/v1/messages';
+                headers['x-api-key'] = apiKey;
+                headers['anthropic-version'] = '2023-06-01';
+                body.model = model;
+                const sysMsg = messages.find((m: any) => m.role === 'system')?.content;
+                if (sysMsg) body.system = sysMsg;
+                body.messages = messages.filter((m: any) => m.role !== 'system');
+            } else {
+                headers['Authorization'] = `Bearer ${apiKey}`;
+                body.model = model;
+                if (provider === 'openrouter') { url = 'https://openrouter.ai/api/v1/chat/completions'; headers['HTTP-Referer'] = 'https://crabshell.local'; headers['X-Title'] = 'CrabShell'; }
+                else if (provider === 'openai') url = 'https://api.openai.com/v1/chat/completions';
+                else if (provider === 'groq') url = 'https://api.groq.com/openai/v1/chat/completions';
+                else if (provider === 'mistral') url = 'https://api.mistral.ai/v1/chat/completions';
+                else if (provider === 'deepseek') url = 'https://api.deepseek.com/v1/chat/completions';
+                else if (provider === 'xai') url = 'https://api.x.ai/v1/chat/completions';
+                else url = 'https://openrouter.ai/api/v1/chat/completions';
+            }
+
+            const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+            const data = await (response as any).json();
+
+            if (!response.ok) {
+                console.error('LLM API Error:', data);
+                return { output: `❌ **API ERROR**: ${JSON.stringify(data)}` };
+            }
+
+            let output = '';
+            if (provider === 'google') output = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            else if (provider === 'anthropic') output = data.content?.[0]?.text || '';
+            else output = data.choices?.[0]?.message?.content || '';
+
+            return { output: output || 'Error extracting LLM response' };
+        } catch (e: any) {
+            console.error('Proxy LLM Error:', e);
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
     fastify.get('/webhook/:token', async (_request: any, _reply: any) => {
         return { message: 'Use POST /webhook/:token for Telegram updates' };
     });
@@ -562,45 +687,45 @@ export async function startServer() {
         const cleanSecret = WEBHOOK_SECRET.replace(/[^a-zA-Z0-9_-]/g, '') || 'hermitSecret123';
         const requestSecret = request.query.secret;
         const headerSecret = request.headers['x-telegram-bot-api-secret-token'];
-        
-        console.log(`[Webhook] Received request for token ${request.params.token.slice(0,8)}...`, { querySecret: requestSecret, headerSecret: headerSecret ? 'present' : 'missing' });
-        
+
+        console.log(`[Webhook] Received request for token ${request.params.token.slice(0, 8)}...`, { querySecret: requestSecret, headerSecret: headerSecret ? 'present' : 'missing' });
+
         if (requestSecret !== cleanSecret && headerSecret !== cleanSecret) {
             console.log(`[Webhook] Secret mismatch. Expected: ${cleanSecret}`);
             return reply.code(403).send({ error: 'Forbidden: Invalid webhook secret' });
         }
-        
+
         const token = request.params.token;
         const update = request.body as any;
-        
+
         reply.code(200).send({ ok: true, status: 'accepted' });
-        
+
         setImmediate(async () => {
             try {
                 const chatId = update.message?.chat?.id || update.callback_query?.message?.chat?.id;
                 const userId = update.message?.from?.id || update.callback_query?.from?.id;
-                
+
                 const immediateResponse = await handleTelegramUpdate(token, update);
-                
+
                 if (immediateResponse && chatId) {
                     await sendTelegramMessage(token, chatId, immediateResponse);
                     return;
                 }
-                
+
                 if (update.message?.text && chatId && userId) {
                     const text = update.message.text;
-                    
+
                     if (!text.startsWith('/')) {
                         const agent = await getAgentByToken(token);
                         const agentName = agent?.name || update.message.from?.first_name || 'Agent';
                         const statusMsg = await sendTelegramMessage(token, chatId, `🔄 *${agentName}* is waking up...`);
-                        
+
                         const result = await processAgentMessage(token, chatId, userId, text, statusMsg);
                         const tokenAgent = await getAgentByToken(token);
                         if (tokenAgent) {
                             await createAgentRuntimeLog(tokenAgent.id, 'info', 'telegram', 'Telegram message processed', { userId, textPreview: text.slice(0, 120) });
                         }
-                        
+
                         await smartReply(token, chatId, result.output, statusMsg);
                     }
                 }
@@ -657,10 +782,10 @@ export async function startServer() {
 
     fastify.get('/api/terminal/:containerId', { websocket: true }, async (connection: any, req: any) => {
         const containerId = req.params.containerId;
-        
+
         try {
             const container = docker.getContainer(containerId);
-            
+
             const exec = await container.exec({
                 AttachStdin: true,
                 AttachStdout: true,
@@ -709,15 +834,15 @@ export async function startServer() {
     });
 
     const WORKSPACE_DIR = path.join(__dirname, '../../data/workspaces');
-    
+
     fastify.get('/api/files/:agentId/:userId', async (request: any, reply: any) => {
         const { agentId, userId } = request.params;
         const workspacePath = path.join(WORKSPACE_DIR, `${agentId}_${userId}`);
-        
+
         if (!fs.existsSync(workspacePath)) {
             return reply.code(404).send({ error: 'Workspace not found' });
         }
-        
+
         const listFiles = (dir: string, baseDir: string): any[] => {
             const items: any[] = [];
             try {
@@ -743,15 +868,15 @@ export async function startServer() {
                                 modified: stat.mtime
                             });
                         }
-                    } catch {}
+                    } catch { }
                 }
-            } catch {}
+            } catch { }
             return items.sort((a, b) => {
                 if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
                 return a.name.localeCompare(b.name);
             });
         };
-        
+
         return { files: listFiles(workspacePath, workspacePath) };
     });
 
@@ -760,20 +885,20 @@ export async function startServer() {
         const filePath = request.params['*'];
         const workspacePath = path.join(WORKSPACE_DIR, `${agentId}_${userId}`);
         const fullPath = path.join(workspacePath, filePath);
-        
+
         if (!fullPath.startsWith(workspacePath)) {
             return reply.code(403).send({ error: 'Access denied' });
         }
-        
+
         if (!fs.existsSync(fullPath)) {
             return reply.code(404).send({ error: 'File not found' });
         }
-        
+
         const stat = fs.statSync(fullPath);
         if (stat.isDirectory()) {
             return reply.code(400).send({ error: 'Cannot download directory' });
         }
-        
+
         return reply.sendFile(filePath, workspacePath);
     });
 
@@ -807,11 +932,11 @@ export async function startServer() {
     fastify.get('/api/agents/:id/runtime-logs/:userId', async (request: any, reply: any) => {
         const { id, userId } = request.params;
         const logPath = path.join(WORKSPACE_DIR, `${id}_${userId}`, '.hermit.log');
-        
+
         if (!fs.existsSync(logPath)) {
             return { logs: "No logs found yet. Send a message to the agent first!" };
         }
-        
+
         try {
             const content = fs.readFileSync(logPath, 'utf-8');
             return { logs: content.slice(-5000) };
@@ -873,28 +998,28 @@ export async function startServer() {
 </html>`);
             }
         }
-        
+
         if (isNaN(targetPort) || targetPort < 1 || targetPort > 65535) {
             return reply.code(400).send({ error: 'Invalid port' });
         }
-        
+
         const containers = await listContainers();
         const target = containers.find((c: any) => c.Labels?.['hermitshell.agent_id'] === String(agentId));
-        
+
         if (!target || target.State !== 'running') {
             return reply.code(404).send({ error: 'Agent container not running' });
         }
-        
+
         try {
             const containerInfo = await docker.getContainer(target.Id).inspect();
             const ip = containerInfo.NetworkSettings?.IPAddress;
-            
+
             if (!ip) {
                 return reply.code(500).send({ error: 'Container has no IP address' });
             }
-            
+
             const targetUrl = `http://${ip}:${targetPort}/${targetPath}`;
-            
+
             return new Promise((resolve, reject) => {
                 const proxyReq = http.request(targetUrl, {
                     method: request.method,
@@ -908,12 +1033,12 @@ export async function startServer() {
                     proxyRes.pipe(reply.raw);
                     proxyRes.on('end', () => resolve(reply));
                 });
-                
+
                 proxyReq.on('error', (err) => {
                     reply.code(502).send({ error: `Proxy error: ${err.message}` });
                     resolve(reply);
                 });
-                
+
                 proxyReq.end();
             });
         } catch (err: any) {
@@ -933,28 +1058,28 @@ export async function startServer() {
                 return reply.redirect(`/preview/${agentId}/${targetPort}/`);
             }
         }
-        
+
         if (isNaN(targetPort) || targetPort < 1 || targetPort > 65535) {
             return reply.code(400).send({ error: 'Invalid port' });
         }
-        
+
         const containers = await listContainers();
         const target = containers.find((c: any) => c.Labels?.['hermitshell.agent_id'] === String(agentId));
-        
+
         if (!target || target.State !== 'running') {
             return reply.code(404).send({ error: 'Agent container not running' });
         }
-        
+
         try {
             const containerInfo = await docker.getContainer(target.Id).inspect();
             const ip = containerInfo.NetworkSettings?.IPAddress;
-            
+
             if (!ip) {
                 return reply.code(500).send({ error: 'Container has no IP address' });
             }
-            
+
             const targetUrl = `http://${ip}:${targetPort}/`;
-            
+
             return new Promise((resolve) => {
                 const proxyReq = http.request(targetUrl, {
                     method: request.method,
@@ -968,12 +1093,12 @@ export async function startServer() {
                     proxyRes.pipe(reply.raw);
                     proxyRes.on('end', () => resolve(reply));
                 });
-                
+
                 proxyReq.on('error', (err: any) => {
                     reply.code(502).send({ error: `Proxy error: ${err.message}` });
                     resolve(reply);
                 });
-                
+
                 if (request.body) {
                     proxyReq.write(typeof request.body === 'string' ? request.body : JSON.stringify(request.body));
                 }
@@ -1018,7 +1143,7 @@ export async function startServer() {
     await fastify.listen({ port: Number(PORT), host: '0.0.0.0' });
     console.log(`🦀 Shell listening on port ${PORT}`);
     console.log(`📊 Dashboard available at http://localhost:${PORT}/dashboard/`);
-    
+
     const existingUrl = await getSetting('public_url');
     if (!existingUrl || existingUrl === '') {
         console.log('🚇 Starting Cloudflare Tunnel...');

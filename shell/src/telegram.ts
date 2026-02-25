@@ -3,6 +3,7 @@ import { spawnAgent, docker, getCubicleStatus, stopCubicle, removeCubicle, listC
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import * as chokidar from 'chokidar';
 import { loadHistory, saveHistory, clearHistory } from './history';
 import { setPreviewPassword } from './server';
 
@@ -34,7 +35,7 @@ const pendingDelegations = new Map<string, { agentId: number; role: string; task
 
 export async function sendChatAction(token: string, chatId: number, action: 'typing' | 'upload_document' = 'typing'): Promise<void> {
     const url = `https://api.telegram.org/bot${token}/sendChatAction`;
-    
+
     try {
         await fetch(url, {
             method: 'POST',
@@ -53,18 +54,18 @@ export async function smartReply(token: string, chatId: number, text: string, me
     if (text.length > TELEGRAM_MAX_LENGTH) {
         const buffer = Buffer.from(text, 'utf-8');
         const url = `https://api.telegram.org/bot${token}/sendDocument`;
-        
+
         const formData = new FormData();
         formData.append('chat_id', String(chatId));
         formData.append('document', new Blob([buffer], { type: 'text/plain' }), 'output.txt');
         formData.append('caption', '📄 Output was too long, sent as file.');
-        
+
         if (messageId) {
             try {
                 await editMessageText(token, chatId, messageId, '✅ Response ready:');
-            } catch {}
+            } catch { }
         }
-        
+
         try {
             await fetch(url, {
                 method: 'POST',
@@ -92,22 +93,22 @@ export async function smartReply(token: string, chatId: number, text: string, me
 function splitMessage(text: string, maxLength: number = TELEGRAM_MAX_LENGTH): string[] {
     const chunks: string[] = [];
     let remaining = text;
-    
+
     while (remaining.length > maxLength) {
         let splitPoint = maxLength;
         const newlineIndex = remaining.lastIndexOf('\n', maxLength);
         if (newlineIndex > maxLength * 0.5) {
             splitPoint = newlineIndex + 1;
         }
-        
+
         chunks.push(remaining.slice(0, splitPoint));
         remaining = remaining.slice(splitPoint);
     }
-    
+
     if (remaining.length > 0) {
         chunks.push(remaining);
     }
-    
+
     return chunks;
 }
 
@@ -136,7 +137,7 @@ export async function handleTelegramUpdate(token: string, update: TelegramUpdate
         console.log(`  Username: @${username}`);
         console.log(`  First Name: ${firstName}`);
         console.log(`  Add this user to allowlist in dashboard to grant access.`);
-        
+
         return `🔒 *Access Required*
 
 Your Telegram ID: \`${userId}\`
@@ -179,7 +180,7 @@ To get access, follow these steps:
             resize_keyboard: true,
             one_time_keyboard: false
         };
-        
+
         const url = `https://api.telegram.org/bot${token}/sendMessage`;
         await fetch(url, {
             method: 'POST',
@@ -226,7 +227,7 @@ To get access, follow these steps:
         const status = await getCubicleStatus(agent.id, userId);
         const budget = await getBudget(agent.id);
         const settings = await import('./db').then(m => m.getAllSettings());
-        
+
         let workspaceFiles = 'N/A';
         const workspacePath = path.join(__dirname, '../../data/workspaces', `${agent.id}_${userId}`);
         if (fs.existsSync(workspacePath)) {
@@ -314,18 +315,18 @@ To get access, follow these steps:
         if (!isOperator) {
             return `❌ Operator only command.`;
         }
-        
+
         const containers = await listContainers();
         if (containers.length === 0) {
             return `📦 No containers running.`;
         }
-        
+
         const lines = containers.slice(0, 10).map(c => {
             const status = c.State === 'running' ? '🟢' : c.State === 'exited' ? '🔴' : '🟡';
             const name = c.Names?.[0]?.replace('/', '') || c.Id.slice(0, 12);
             return `${status} ${name} (${c.Image})`;
         });
-        
+
         return `📦 *All Containers (${containers.length})*\n\n${lines.join('\n')}` +
             (containers.length > 10 ? `\n... +${containers.length - 10} more` : '');
     }
@@ -335,14 +336,14 @@ To get access, follow these steps:
         if (!isOperator) {
             return `❌ Operator only command.`;
         }
-        
+
         const agents = await getAllAgents();
         const lines = agents.map(a => {
             const status = a.is_active ? '🟢' : '🔴';
             const hitl = a.require_approval ? '🔒' : '';
             return `${status} ${a.name} - ${a.role || 'No role'} ${hitl}`;
         });
-        
+
         return `🤖 *All Agents (${agents.length})*\n\n${lines.join('\n')}`;
     }
 
@@ -366,7 +367,7 @@ export async function processAgentMessage(
     await createAgentRuntimeLog(agent.id, 'info', 'telegram', 'Message received', { userId, chatId, preview: text.slice(0, 120) });
 
     await sendChatAction(token, chatId, 'typing');
-    
+
     if (statusMessageId) {
         await editMessageText(token, chatId, statusMessageId, `🔄 *${agent.name}* is waking up...`);
     }
@@ -375,7 +376,7 @@ export async function processAgentMessage(
     const history = loadHistory(historyKey);
 
     const meetings = await getActiveMeetings(agent.id);
-    const meetingContext = meetings.length > 0 
+    const meetingContext = meetings.length > 0
         ? meetings.map(m => `Meeting with Agent ${m.initiator_id === agent.id ? m.participant_id : m.initiator_id}: ${m.topic}\n${m.transcript || 'No transcript yet'}`).join('\n\n')
         : null;
 
@@ -383,7 +384,7 @@ export async function processAgentMessage(
         if (statusMessageId) {
             await editMessageText(token, chatId, statusMessageId, `🔄 *${agent.name}* is thinking...`);
         }
-        
+
         const result = await spawnAgent({
             agentId: agent.id,
             agentName: agent.name,
@@ -399,20 +400,33 @@ export async function processAgentMessage(
             onProgress: async (status: string, details?: string) => {
                 if (statusMessageId) {
                     const settings = await import('./db').then(m => m.getAllSettings());
-                    let msg = details 
+                    let msg = details
                         ? `${status}\n\`${details}\``
                         : status;
-                    
-                    if (settings.public_url) {
-                        const watchUrl = `${settings.public_url}/dashboard/`;
-                        msg += `\n\n[📊 Watch in Dashboard](${watchUrl})`;
-                    }
-                    
+
                     await editMessageText(token, chatId, statusMessageId, msg);
                 }
                 await sendChatAction(token, chatId, 'typing');
             }
         });
+
+        // 📎 Proactive File Delivery: Check the /out folder immediately after execution
+        try {
+            const outPath = path.join(WORKSPACE_DIR, `${agent.id}_${userId}`, 'out');
+            if (fs.existsSync(outPath)) {
+                const files = fs.readdirSync(outPath);
+                for (const file of files) {
+                    const fullPath = path.join(outPath, file);
+                    if (fs.statSync(fullPath).isFile() && !processedFiles.has(fullPath)) {
+                        processedFiles.add(fullPath);
+                        await sendFileViaTelegram(token, chatId, fullPath, `📎 ${file} (Direct)`);
+                        setTimeout(() => processedFiles.delete(fullPath), 30000);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[ProactiveFile] Error checking out folder:', e);
+        }
 
         if (result.output.includes('401') && (result.output.includes('Unauthorized') || result.output.includes('Authentication'))) {
             result.output = `❌ *API Key Error (401 Unauthorized)*\n\nYour API key is either missing or invalid for this provider.\n\n*How to fix:*\n1. Open Dashboard -> Settings\n2. Enter a valid API key\n3. Click "Save All Settings"\n4. Send \`/reset\` here to delete this broken cubicle and apply your new keys!`;
@@ -422,8 +436,6 @@ export async function processAgentMessage(
         history.push({ role: 'assistant', content: result.output });
         saveHistory(historyKey, history.slice(-40));
 
-        result.output = await detectAndSendFiles(token, chatId, result.output, agent.id, userId);
-        
         const previewInfo = detectWebServer(result.output, agent.id);
         if (previewInfo) {
             await sendPreviewButton(token, chatId, previewInfo.url, previewInfo.port, agent.id);
@@ -432,11 +444,11 @@ export async function processAgentMessage(
         if (result.output.includes('[MEETING]') && result.output.includes('TARGET_ROLE:')) {
             const roleMatch = result.output.match(/TARGET_ROLE:\s*(.+)/);
             const taskMatch = result.output.match(/TASK:\s*(.+)/);
-            
+
             if (roleMatch && taskMatch) {
                 const targetRole = roleMatch[1].trim();
                 const task = taskMatch[1].trim();
-                
+
                 const delegationId = `${agent.id}_${Date.now()}`;
                 pendingDelegations.set(delegationId, {
                     agentId: agent.id,
@@ -444,10 +456,10 @@ export async function processAgentMessage(
                     task: task,
                     timestamp: Date.now()
                 });
-                
+
                 await sendDelegationRequest(token, agent.id, agent.name, targetRole, task, delegationId);
-                
-                return { 
+
+                return {
                     output: `📋 Delegation request sent to operator for approval.\nTarget Role: *${targetRole}*\nTask: ${task.substring(0, 100)}...`,
                     messageId: statusMessageId
                 };
@@ -487,7 +499,7 @@ async function sendDelegationRequest(
     };
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    
+
     await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -512,17 +524,17 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
         const delegationId = parts[1];
         const agentId = parseInt(parts[2], 10);
         const adminId = query.from.id;
-        
+
         const delegation = pendingDelegations.get(delegationId);
-        
+
         if (!delegation) {
             await editMessageText(token, chatId, messageId, `❌ Delegation request expired or not found.`);
             return null;
         }
-        
+
         if (action === 'delegate_approve') {
             await editMessageText(token, chatId, messageId, `✅ *Delegation Approved!*\n\nSpawning sub-agent for: ${delegation.role}...`);
-            
+
             const agent = await getAgentById(agentId);
             if (agent) {
                 try {
@@ -537,7 +549,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
                         requireApproval: false,
                         userId: adminId
                     });
-                    
+
                     await sendTelegramMessage(token, chatId, `🤝 Sub-agent completed:\n\n${result.output.substring(0, 3000)}`);
                 } catch (err: any) {
                     await sendTelegramMessage(token, chatId, `❌ Delegation failed: ${err.message}`);
@@ -546,7 +558,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
         } else {
             await editMessageText(token, chatId, messageId, `❌ *Delegation Denied.* No sub-agent will be spawned.`);
         }
-        
+
         pendingDelegations.delete(delegationId);
         return null;
     }
@@ -557,7 +569,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
 
     if (action === 'approve' || action === 'deny') {
         const status = action === 'approve' ? 'approved' : 'denied';
-        
+
         if (!isNaN(logId)) {
             await updateAuditLog(logId, status, query.from.id);
         }
@@ -578,7 +590,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
             }
         } else {
             await editMessageText(token, chatId, messageId, `❌ *Denied.* Command will not be executed.`);
-            
+
             if (containerId) {
                 try {
                     const container = docker.getContainer(containerId);
@@ -588,7 +600,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
                         AttachStderr: true
                     });
                     await exec.start({});
-                } catch {}
+                } catch { }
             }
         }
 
@@ -600,7 +612,7 @@ async function handleCallbackQuery(token: string, query: TelegramUpdate['callbac
 
 export async function sendVerificationCode(token: string, chatId: number, code: string): Promise<boolean> {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    
+
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -611,7 +623,7 @@ export async function sendVerificationCode(token: string, chatId: number, code: 
                 parse_mode: 'Markdown'
             })
         });
-        
+
         return response.ok;
     } catch (err) {
         console.error('Failed to send verification code:', err);
@@ -630,7 +642,7 @@ export async function sendApprovalRequest(
 
     const operator = await getOperator();
     const adminChatId = operator?.user_id || await getSetting('admin_chat_id');
-    
+
     if (!adminChatId) {
         console.log('No operator/admin chat ID configured');
         return;
@@ -647,7 +659,7 @@ export async function sendApprovalRequest(
     };
 
     const url = `https://api.telegram.org/bot${tgToken}/sendMessage`;
-    
+
     await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -695,7 +707,7 @@ export async function editMessageText(token: string, chatId: number, messageId: 
         });
         return await response.json() as { ok: boolean; description?: string };
     };
-    
+
     try {
         let data = await edit({
             chat_id: chatId,
@@ -735,22 +747,22 @@ async function sendFileViaTelegram(token: string, chatId: number, filePath: stri
         console.error(`[File] File not found: ${filePath}`);
         return false;
     }
-    
+
     const stat = fs.statSync(filePath);
     if (stat.size > 50 * 1024 * 1024) {
         console.error(`[File] File too large: ${filePath} (${stat.size} bytes)`);
         return false;
     }
-    
+
     const url = `https://api.telegram.org/bot${token}/sendDocument`;
     const buffer = fs.readFileSync(filePath);
     const filename = path.basename(filePath);
-    
+
     const formData = new FormData();
     formData.append('chat_id', String(chatId));
     formData.append('document', new Blob([buffer]), filename);
     if (caption) formData.append('caption', caption);
-    
+
     try {
         await sendChatAction(token, chatId, 'upload_document');
         const response = await fetch(url, { method: 'POST', body: formData });
@@ -767,59 +779,66 @@ async function sendFileViaTelegram(token: string, chatId: number, filePath: stri
     }
 }
 
-async function detectAndSendFiles(token: string, chatId: number, output: string, agentId: number, userId: number): Promise<string> {
-    const filePattern = /FILE:\s*(\/app\/workspace\/[^\s\n]+)/g;
-    const matches = [...output.matchAll(filePattern)];
-    
-    if (matches.length === 0) return output;
-    
-    const workspaceId = `${agentId}_${userId}`;
-    const hostWorkspace = path.join(WORKSPACE_DIR, workspaceId);
-    
-    for (const match of matches) {
-        const containerPath = match[1];
-        const hostPath = containerPath.replace('/app/workspace', hostWorkspace);
-        
-        if (fs.existsSync(hostPath)) {
-            const stat = fs.statSync(hostPath);
-            if (stat.isFile()) {
-                await sendFileViaTelegram(token, chatId, hostPath, `📎 ${path.basename(hostPath)}`);
-            } else if (stat.isDirectory()) {
-                const files = fs.readdirSync(hostPath).slice(0, 10);
-                for (const file of files) {
-                    const subPath = path.join(hostPath, file);
-                    const subStat = fs.statSync(subPath);
-                    if (subStat.isFile() && subStat.size < 50 * 1024 * 1024) {
-                        await sendFileViaTelegram(token, chatId, subPath);
-                    }
+let fileWatcher: chokidar.FSWatcher | null = null;
+const processedFiles = new Set<string>();
+
+export function startFileWatcher() {
+    if (fileWatcher) return;
+
+    console.log('[FileWatcher] Starting autonomous file portal monitor...');
+    fileWatcher = chokidar.watch(path.join(WORKSPACE_DIR, '**/out/**/*'), {
+        persistent: true,
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 500 }
+    });
+
+    fileWatcher.on('add', async (filePath) => {
+        if (processedFiles.has(filePath)) return;
+        processedFiles.add(filePath);
+
+        const parts = filePath.split(path.sep);
+        const outIndex = parts.indexOf('out');
+        if (outIndex > 0) {
+            const workspaceId = parts[outIndex - 1];
+            const [agentIdStr, userIdStr] = workspaceId.split('_');
+            const agentId = Number(agentIdStr);
+            const chatId = Number(userIdStr);
+
+            try {
+                const agent = await getAgentById(agentId);
+                if (agent && agent.telegram_token) {
+                    await sendFileViaTelegram(agent.telegram_token, chatId, filePath, `📎 ${path.basename(filePath)} (Detected)`);
                 }
+            } catch (e) {
+                console.error('[FileWatcher] Error sending file:', e);
             }
         }
-    }
-    
-    return output.replace(filePattern, '✅ $1 (sent)');
+
+        // Clear from Set after a few seconds in case it gets rewritten
+        setTimeout(() => processedFiles.delete(filePath), 10000);
+    });
 }
 
 export async function registerWebhook(token: string, baseUrl: string, secret: string): Promise<boolean> {
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
     const cleanSecret = secret.replace(/[^a-zA-Z0-9_-]/g, '') || 'hermitSecret123';
-    
+
     try {
         await fetch(`https://api.telegram.org/bot${token}/deleteWebhook`);
-    } catch {}
-    
+    } catch { }
+
     try {
         const webhookUrl = `${cleanBaseUrl}/webhook/${token}?secret=${encodeURIComponent(cleanSecret)}`;
         const tgUrl = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}&secret_token=${cleanSecret}`;
-        
+
         const response = await fetch(tgUrl);
         const data = await response.json() as any;
-        
+
         if (data.ok) {
             await setBotCommands(token);
             return true;
         }
-        console.error(`Failed to set webhook for token ${token.substring(0,8)}...:`, data);
+        console.error(`Failed to set webhook for token ${token.substring(0, 8)}...:`, data);
         return false;
     } catch (e) {
         console.error('Error setting webhook:', e);
@@ -829,7 +848,7 @@ export async function registerWebhook(token: string, baseUrl: string, secret: st
 
 export async function setBotCommands(token: string): Promise<void> {
     const url = `https://api.telegram.org/bot${token}/setMyCommands`;
-    
+
     try {
         await fetch(url, {
             method: 'POST',
@@ -868,7 +887,7 @@ async function handleStatusCommand(agent: any, userId: number): Promise<string> 
 
 async function handleWorkspaceCommand(agent: any, userId: number): Promise<string> {
     const workspacePath = path.join(__dirname, '../../data/workspaces', `${agent.id}_${userId}`);
-    
+
     if (!fs.existsSync(workspacePath)) {
         return `📁 Workspace not created yet.\n\nSend a message to spawn a container and create the workspace.`;
     }
@@ -891,11 +910,11 @@ async function handleWorkspaceCommand(agent: any, userId: number): Promise<strin
             }
             return items;
         };
-        
+
         const files = listFiles(workspacePath);
         const fileList = files.slice(0, 20).join('\n') || '(empty)';
         const more = files.length > 20 ? `\n... +${files.length - 20} more` : '';
-        
+
         return `📁 *Workspace*\n\`${workspacePath}\`\n\n${fileList}${more}`;
     } catch (e: any) {
         return `❌ Error reading workspace: ${e.message}`;
@@ -961,7 +980,7 @@ async function handleFileUpload(token: string, agent: any, userId: number, messa
     try {
         let fileId: string;
         let fileName: string;
-        
+
         if (message.document) {
             fileId = message.document.file_id;
             fileName = message.document.file_name || 'uploaded_file';
@@ -975,7 +994,7 @@ async function handleFileUpload(token: string, agent: any, userId: number, messa
         const fileUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`;
         const fileResponse = await fetch(fileUrl);
         const fileData = await fileResponse.json() as any;
-        
+
         if (!fileData.ok) {
             return `❌ Failed to get file info.`;
         }
@@ -984,10 +1003,10 @@ async function handleFileUpload(token: string, agent: any, userId: number, messa
         const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
         const downloadResponse = await fetch(downloadUrl);
         const buffer = Buffer.from(await downloadResponse.arrayBuffer());
-        
+
         const savePath = path.join(workspacePath, fileName);
         fs.writeFileSync(savePath, buffer);
-        
+
         return `✅ *File uploaded successfully!*\n\n📄 \`${fileName}\`\nSaved to workspace. I can now access it.`;
     } catch (e: any) {
         return `❌ Failed to upload file: ${e.message}`;
@@ -1007,7 +1026,7 @@ function detectWebServer(output: string, agentId: number): { url: string; port: 
         /serving.*on.*port\s*(\d+)/i,
         /listening.*on.*(\d+)/i
     ];
-    
+
     for (const pattern of portPatterns) {
         const match = output.match(pattern);
         if (match) {
@@ -1024,19 +1043,19 @@ function detectWebServer(output: string, agentId: number): { url: string; port: 
 async function sendPreviewButton(token: string, chatId: number, previewPath: string, port: number, agentId: number): Promise<void> {
     const settings = await import('./db').then(m => m.getAllSettings());
     const publicUrl = settings.public_url;
-    
+
     if (!publicUrl) return;
 
     const password = crypto.randomBytes(3).toString('hex');
     setPreviewPassword(agentId, port, password);
-    
+
     const fullUrl = `${publicUrl}${previewPath}`;
     const keyboard = {
         inline_keyboard: [[
             { text: `🌐 Open Live Preview (Port ${port})`, url: fullUrl }
         ]]
     };
-    
+
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     await fetch(url, {
         method: 'POST',

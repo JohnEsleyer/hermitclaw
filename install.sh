@@ -77,44 +77,41 @@ if ! docker ps &>/dev/null; then
     DOCKER="sudo docker"
 fi
 
-echo "  → Building hermit-crab (AI Agent)..."
-$DOCKER build -t hermit-crab:latest crab/
-
 echo "  → Building hermit/base..."
 $DOCKER build -t hermit/base:latest -f - . << 'EOF'
-FROM hermit-crab:latest AS crab-source
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl jq sed gawk bash coreutils iputils-ping dnsutils ca-certificates \
     nodejs npm sqlite3 ffmpeg python3 python3-pip python3-venv \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=crab-source /usr/local/bin/crab /usr/local/bin/crab
+COPY crab/agent.py /usr/local/bin/agent.py
+RUN chmod +x /usr/local/bin/agent.py
 WORKDIR /workspace
-CMD ["crab"]
+CMD ["sleep", "infinity"]
 EOF
 
 echo "  → Building hermit/python..."
 $DOCKER build -t hermit/python:latest -f - . << 'EOF'
-FROM hermit-crab:latest AS crab-source
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir requests pandas numpy
-COPY --from=crab-source /usr/local/bin/crab /usr/local/bin/crab
+COPY crab/agent.py /usr/local/bin/agent.py
+RUN chmod +x /usr/local/bin/agent.py
 WORKDIR /workspace
-CMD ["crab"]
+CMD ["sleep", "infinity"]
 EOF
 
 echo "  → Building hermit/netsec..."
 $DOCKER build -t hermit/netsec:latest -f - . << 'EOF'
-FROM hermit-crab:latest AS crab-source
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl jq nmap iputils-ping dnsutils net-tools openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=crab-source /usr/local/bin/crab /usr/local/bin/crab
+COPY crab/agent.py /usr/local/bin/agent.py
+RUN chmod +x /usr/local/bin/agent.py
 WORKDIR /workspace
-CMD ["crab"]
+CMD ["sleep", "infinity"]
 EOF
 
 echo "📦 Installing Node.js dependencies..."

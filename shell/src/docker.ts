@@ -66,7 +66,7 @@ async function findContainerByLabels(agentId: number, userId: number) {
 export async function getOrCreateCubicle(config: AgentConfig): Promise<Docker.Container> {
     const userId = config.userId || 0;
     const existing = await findContainerByLabels(config.agentId, userId);
-    
+
     if (existing) {
         const container = docker.getContainer(existing.id);
         if (existing.state !== 'running') {
@@ -76,7 +76,7 @@ export async function getOrCreateCubicle(config: AgentConfig): Promise<Docker.Co
         await updateContainerLastActive(existing.id);
         return container;
     }
-    
+
     return await createNewCubicle(config);
 }
 
@@ -88,7 +88,7 @@ async function updateContainerLastActive(containerId: string): Promise<void> {
         await container.update({
             Labels: { ...(existingInfo.Config?.Labels || {}), [LABELS.LAST_ACTIVE]: now, [LABELS.STATUS]: 'active' }
         });
-    } catch (err) {}
+    } catch (err) { }
 }
 
 async function createNewCubicle(config: AgentConfig): Promise<Docker.Container> {
@@ -96,8 +96,14 @@ async function createNewCubicle(config: AgentConfig): Promise<Docker.Container> 
     const userId = config.userId || 0;
     const workspaceId = `${config.agentId}_${userId}`;
     const workspacePath = path.join(WORKSPACE_DIR, workspaceId);
-    
-    if (!fs.existsSync(workspacePath)) fs.mkdirSync(workspacePath, { recursive: true });
+
+    if (!fs.existsSync(workspacePath)) {
+        fs.mkdirSync(workspacePath, { recursive: true });
+    }
+    fs.mkdirSync(path.join(workspacePath, 'out'), { recursive: true });
+    fs.mkdirSync(path.join(workspacePath, 'in'), { recursive: true });
+    fs.mkdirSync(path.join(workspacePath, 'www'), { recursive: true });
+    fs.mkdirSync(path.join(workspacePath, 'work'), { recursive: true });
 
     const settings = await getAllSettings();
     const provider = config.llmProvider || settings.default_provider || 'openrouter';
@@ -114,33 +120,9 @@ async function createNewCubicle(config: AgentConfig): Promise<Docker.Container> 
 
     if (config.requireApproval) envVars.push('HITL_ENABLED=true');
 
-    const providerKeyMap: Record<string, { key: string; env: string }> = {
-        'openai': { key: 'openai_api_key', env: 'OPENAI_API_KEY' },
-        'anthropic': { key: 'anthropic_api_key', env: 'ANTHROPIC_API_KEY' },
-        'google': { key: 'google_api_key', env: 'GOOGLE_API_KEY' },
-        'groq': { key: 'groq_api_key', env: 'GROQ_API_KEY' },
-        'openrouter': { key: 'openrouter_api_key', env: 'OPENROUTER_API_KEY' },
-        'mistral': { key: 'mistral_api_key', env: 'MISTRAL_API_KEY' },
-        'deepseek': { key: 'deepseek_api_key', env: 'DEEPSEEK_API_KEY' },
-        'xai': { key: 'xai_api_key', env: 'XAI_API_KEY' },
-    };
-
-    let activeKeyFound = false;
-    for (const [prov, mapping] of Object.entries(providerKeyMap)) {
-        const envValue = settings[mapping.key] || process.env[mapping.env];
-        if (envValue) {
-            envVars.push(`${mapping.env}=${envValue}`);
-            if (provider === prov) {
-                envVars.push(`LLM_API_KEY=${envValue}`);
-                envVars.push(`OPENROUTER_API_KEY=${envValue}`);
-                activeKeyFound = true;
-            }
-        }
-    }
-
     const now = new Date().toISOString();
     const binds = [`${workspacePath}:/app/workspace:rw`];
-    
+
     const pipCachePath = path.join(CACHE_DIR, 'pip');
     const npmCachePath = path.join(CACHE_DIR, 'npm');
     if (!fs.existsSync(pipCachePath)) fs.mkdirSync(pipCachePath, { recursive: true });
@@ -187,7 +169,7 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
         'deepseek': { key: 'deepseek_api_key', env: 'DEEPSEEK_API_KEY' },
         'xai': { key: 'xai_api_key', env: 'XAI_API_KEY' },
     };
-    
+
     if (!settings[providerKeyMap[provider]?.key] && !process.env[providerKeyMap[provider]?.env]) {
         return { containerId: '', output: `❌ **SYSTEM ERROR**: Missing API Key for '${provider}'.` };
     }
@@ -195,17 +177,30 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
     try {
         const container = await getOrCreateCubicle(config);
         const containerId = container.id;
-        
-        const historyB64 = Buffer.from(JSON.stringify(config.history)).toString('base64');
-        
+
+        const { getAgentMemories } = require('./db');
+        const memories = await getAgentMemories(config.agentId, 20);
+        let injectedHistory = [...config.history];
+
+        if (memories && memories.length > 0) {
+            const memoryText = memories.map((m: any) => `- ${m.content}`).join('\n');
+            injectedHistory.unshift({
+                role: 'system',
+                content: `Here are important facts, rules, and preferences you should remember for this user:\n${memoryText}`
+            });
+        }
+
+        const historyB64 = Buffer.from(JSON.stringify(injectedHistory)).toString('base64');
+
         const exec = await container.exec({
-            Cmd: ['sh', '-c', 'crab 2>&1 | tee -a /app/workspace/.hermit.log'],
+            Cmd: ['sh', '-c', 'python3 /usr/local/bin/agent.py 2>&1 | tee -a /app/workspace/work/.hermit.log'],
             Env: [
                 `USER_MSG=${config.userMessage}`,
                 `HISTORY=${historyB64}`,
                 `MAX_TOKENS=${config.maxTokens}`,
                 `LLM_PROVIDER=${provider}`,
                 `LLM_MODEL=${model}`,
+                `ORCHESTRATOR_URL=http://172.17.0.1:3000`,
                 ...((await container.inspect()).Config.Env || [])
             ],
             AttachStdout: true,
@@ -219,7 +214,7 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
             let approvalLogId: number | null = null;
             let lastProgressUpdate = 0;
             let commandCount = 0;
-            
+
             const sendProgress = (status: string, details?: string) => {
                 const now = Date.now();
                 if (now - lastProgressUpdate > 500) {
@@ -227,12 +222,12 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
                     lastProgressUpdate = now;
                 }
             };
-            
+
             const outStream = new PassThrough();
             outStream.on('data', async (chunk: Buffer) => {
                 const line = chunk.toString('utf8');
                 output += line;
-                
+
                 if (line.includes('COMMAND:')) {
                     commandCount++;
                     const cmd = line.split('COMMAND:')[1]?.split('\n')[0]?.trim() || 'command';
@@ -247,7 +242,7 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
                         approvalLogId = await createAuditLog(config.agentId, containerId, cmd, 'Pending approval');
                         await sendApprovalRequest(config.agentId, containerId, cmd, approvalLogId);
                         sendProgress('⏳ Waiting for approval...', cmd.slice(0, 40));
-                    } catch (err) {}
+                    } catch (err) { }
                 }
                 if (line.includes('[HITL] APPROVED') || line.includes('[HITL] EXECUTED')) {
                     if (approvalLogId) await import('./db').then(m => m.updateAuditLog(approvalLogId as number, 'approved'));
@@ -259,12 +254,12 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
 
             if (stream) {
                 docker.modem.demuxStream(stream, outStream, outStream);
-                
+
                 sendProgress('🧠 Thinking...');
 
                 stream.on('end', async () => {
                     await updateContainerLastActive(containerId);
-                    
+
                     const lines = output.split('\n');
                     const filteredLines = lines.filter(l => {
                         const trimmed = l.trim();
@@ -278,9 +273,9 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
                         if (trimmed.includes('DELEGATION_APPROVAL_REQUIRED')) return false;
                         return true;
                     });
-                    
+
                     let cleanOutput = filteredLines.join('\n').trim();
-                    
+
                     if (!cleanOutput || cleanOutput.length < 2) {
                         if (output.includes('Error:') || output.includes('error')) {
                             const errorLines = lines.filter(l => l.toLowerCase().includes('error'));
@@ -289,7 +284,7 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
                             cleanOutput = `⚠️ Agent completed but produced no visible output.\nTry:\n• Check if API keys are valid\n• Try a simpler request\n• Use /logs to see container logs`;
                         }
                     }
-                    
+
                     resolve({ containerId, output: cleanOutput });
                 });
 
@@ -304,11 +299,11 @@ export async function spawnAgent(config: AgentConfig): Promise<SpawnResult> {
 }
 
 export async function stopCubicle(containerId: string): Promise<void> {
-    try { await docker.getContainer(containerId).stop(); } catch (err) {}
+    try { await docker.getContainer(containerId).stop(); } catch (err) { }
 }
 
 export async function removeCubicle(containerId: string): Promise<void> {
-    try { await docker.getContainer(containerId).remove({ force: true }); } catch (err) {}
+    try { await docker.getContainer(containerId).remove({ force: true }); } catch (err) { }
 }
 
 export async function getCubicleStatus(agentId: number, userId: number) {
@@ -343,7 +338,7 @@ export async function getContainerExec(containerId: string): Promise<Docker.Exec
 export async function restartAgentContainer(agentId: number, userId: number = 0): Promise<boolean> {
     const containerInfo = await findContainerByLabels(agentId, userId);
     if (!containerInfo) return false;
-    
+
     try {
         const container = docker.getContainer(containerInfo.id);
         await container.stop();

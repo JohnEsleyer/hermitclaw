@@ -12,8 +12,8 @@ HermitShell is a **Secure Agentic Operating System**. Each AI agent runs in a Do
 - **Continuous Containers**: Containers run `sleep infinity` and execute commands via `docker exec` - instant response times
 - **Persistent Workspaces**: Each agent+user pair gets a persistent workspace that survives container restarts
 - **Auto Cloudflare Tunnel**: Automatic public URL generation on startup - no manual ngrok required
-- **Web App Previews**: Agents can create web apps accessible via tunnel URL
-- **Automatic File Delivery**: Files created by agents are auto-sent via Telegram
+- **Automatic File Delivery**: Files dropped in `/workspace/out/` are automatically detected and sent via Telegram
+- **Built-in RAG Memory**: Persistent factual memory per agent, configurable via the web UI
 - **Agent Verification Handshake**: Verify Telegram tokens before creating agents via 6-digit code
 - **Auto-Webhook Registration**: Webhooks automatically registered when agents are created
 - **Sync Bots Button**: Re-register all webhooks with one click (useful when public URL changes)
@@ -99,11 +99,8 @@ hermitshell/
 │   │   └── public/       # Source files
 │   ├── dist/             # Built files (synced to shell/dashboard/)
 │   └── package.json
-├── crab/                 # Rust AI agent
-│   ├── src/
-│   │   ├── main.rs       # Entry point + workspace management
-│   │   ├── llm.rs        # OpenAI/OpenRouter client + system prompts
-│   │   └── tools.rs      # Command execution + HITL + delegation
+├── crab/                 # Python AI agent
+│   ├── agent.py          # Unified Python agent daemon
 │   └── Dockerfile
 ├── data/
 │   ├── db/               # libSQL database
@@ -265,23 +262,32 @@ User accesses via:
 2. Shell proxies requests to the container's internal IP
 3. User can preview the app in their browser
 
-### Automatic File Delivery
+### Automatic File Delivery (The Portal)
 
-When agents create files, they're automatically delivered to users:
+HermitShell uses a "Portal" architecture for file transfers. Instead of parsing LLM output, the orchestrator actively monitors a specific directory.
 
-**Agent syntax:**
-```
-FILE: /app/workspace/report.pdf
-FILE: /app/workspace/data.csv
-```
+**How it works:**
+1. Agent saves a file to the outgoing portal:
+   ```bash
+   echo "Report content" > /workspace/out/report.pdf
+   ```
+2. The Orchestrator (`shell`) detects the new file instantly via `chokidar`.
+3. The file is automatically uploaded to the user's Telegram chat.
 
-**What happens:**
-1. Shell detects the `FILE:` marker in agent output
-2. File is read from the workspace
-3. File is sent via Telegram (up to 50MB)
-4. User receives the file instantly on their phone
+**Folder Organization:**
+- `/workspace/out/`: 📤 **Output Portal**. Files placed here are delivered to Telegram immediately.
+- `/workspace/in/`: 📥 **Input Portal**. Files uploaded by the user to the bot land here.
+- `/workspace/www/`: 🌐 **Web Portal**. Files here are served via the public preview URL.
+- `/workspace/work/`: 🛠️ **Scratchpad**. Private working area for the agent.
 
-**Supported file types:** PDF, CSV, images, text files, any binary file under 50MB.
+### Long-Term RAG Memory
+
+Every agent has access to a dedicated RAG (Retrieval-Augmented Generation) memory store.
+
+- **Storage**: Facts and rules are stored in the LibSQL database.
+- **Management**: Use the **"Memories (RAG)"** tab in the Dashboard to manually add or prune memories.
+- **Injection**: Relevant memories are automatically injected into the agent's system prompt before every request.
+- **Persistence**: Memories survive container resets and workspace deletions.
 
 ### Dashboard File Browser
 
@@ -463,19 +469,15 @@ hermitshell.created_at: "2026-02-20T10:00:00Z"
 
 ## Security
 
+- **Air-Gapped Cubicles**: Containers have NO direct internet access. All LLM requests are proxied through the host orchestrator.
+- **Centralized API Keys**: API keys never enter the container; they stay safely on the host system.
 - **Admin Authentication**: Dashboard protected with session-based auth
 - **Operator-First Bootstrap**: Primary admin required during setup
 - **Agent Verification**: Telegram tokens verified before agent creation
-- **Webhook Secret**: All webhooks validated with secret token (alphanumeric only)
-- **API Key Validation**: Multiple layers of checks prevent 401 errors
+- **Webhook Secret**: All webhooks validated with secret token
 - **Human-in-the-Loop**: Dangerous commands require approval
-- **Delegation Control**: Agent collaboration requires approval
-- **Cubicle Isolation**: Each agent runs in its own Docker container
-- **Resource Limits**: 512MB RAM, 1 CPU, 100 process limit
-- **Network Isolation**: Agents can access internet but not host system
 - **Budget Guards**: Per-agent spending limits prevent runaway costs
 - **Audit Trail**: Complete logging of all executed commands
-- **Preview Proxy Isolation**: Web previews only access container internal IP
 - **File Path Validation**: File downloads restricted to workspace directory
 
 ## Troubleshooting
@@ -571,7 +573,7 @@ Or use the **Start** button in the Cubicles dashboard tab.
 
 - **Orchestrator**: Node.js + Fastify + TypeScript
 - **Database**: libSQL (SQLite-compatible)
-- **Agent Runtime**: Rust + Tokio + Reqwest
+- **Agent Runtime**: Python 3.10+
 - **Container Runtime**: Docker with labels + exec
 - **Frontend**: Vanilla JS + Tailwind CSS + xterm.js
 - **LLM Providers**: OpenRouter / OpenAI / Anthropic / Google / Groq / Mistral / DeepSeek / xAI

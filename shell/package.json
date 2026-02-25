@@ -18,6 +18,7 @@
     "@google/genai": "^0.14.1",
     "@libsql/client": "^0.17.0",
     "@openrouter/sdk": "^0.8.0",
+    "chokidar": "^5.0.0",
     "dockerode": "^4.0.0",
     "dotenv": "^16.4.0",
     "fastify": "^4.28.0",
