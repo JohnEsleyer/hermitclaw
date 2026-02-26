@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { discoverSitesFromWorkspaces } from '../src/sites';
+import { discoverSitesFromWorkspaces, deleteSiteWorkspace } from '../src/sites';
 
 describe('discoverSitesFromWorkspaces', () => {
   it('returns only workspaces with visible www files', () => {
@@ -44,5 +44,27 @@ describe('discoverSitesFromWorkspaces', () => {
     expect(sites[0].imageLabel).toBe('unknown');
     expect(sites[0].previewUrl).toBe('http://localhost:3000/preview/5/8080/');
     expect(sites[0].hasPassword).toBe(false);
+  });
+
+  it('deletes only the selected site workspace', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermit-sites-'));
+    const siteA = path.join(root, '5_10', 'www');
+    const siteB = path.join(root, '6_11', 'www');
+    fs.mkdirSync(siteA, { recursive: true });
+    fs.mkdirSync(siteB, { recursive: true });
+    fs.writeFileSync(path.join(siteA, 'index.html'), '<h1>a</h1>');
+    fs.writeFileSync(path.join(siteB, 'index.html'), '<h1>b</h1>');
+
+    const removed = deleteSiteWorkspace(root, 5, 10);
+
+    expect(removed).toBe(true);
+    expect(fs.existsSync(siteA)).toBe(false);
+    expect(fs.existsSync(siteB)).toBe(true);
+  });
+
+  it('returns false when selected site does not exist', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermit-sites-'));
+    const removed = deleteSiteWorkspace(root, 404, 505);
+    expect(removed).toBe(false);
   });
 });

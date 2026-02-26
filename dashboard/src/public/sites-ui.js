@@ -32,6 +32,7 @@
               <button class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs py-1.5 px-2.5 rounded js-copy-site-url" data-copy-url="${url}">Copy URL</button>
               <button class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs py-1.5 px-2.5 rounded js-reveal-password" data-agent-id="${site.agentId}" data-port="8080">Reveal Password</button>
               <button class="bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/30 text-orange-300 text-xs py-1.5 px-2.5 rounded js-regenerate-password" data-agent-id="${site.agentId}" data-port="8080">Regenerate</button>
+              <button class="bg-red-600/20 hover:bg-red-600/30 border border-red-600/30 text-red-300 text-xs py-1.5 px-2.5 rounded js-delete-site" data-agent-id="${site.agentId}" data-user-id="${site.userId}">Delete Site</button>
             </div>
             <div class="text-xs text-slate-400 mt-2">Password: <span class="mono text-emerald-300" id="site-password-${site.agentId}-8080">${site.password || (site.hasPassword ? '••••••••' : 'Not set')}</span></div>
             ${passwordMeta}

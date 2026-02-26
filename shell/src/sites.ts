@@ -83,3 +83,21 @@ export function discoverSitesFromWorkspaces(
         return a.userId - b.userId;
     });
 }
+
+export function deleteSiteWorkspace(workspaceDir: string, agentId: number, userId: number): boolean {
+    if (!Number.isFinite(agentId) || !Number.isFinite(userId)) return false;
+    const workspaceName = `${Math.trunc(agentId)}_${Math.trunc(userId)}`;
+    const workspacePath = path.join(workspaceDir, workspaceName);
+    const wwwPath = path.join(workspacePath, 'www');
+
+    if (!fs.existsSync(wwwPath) || !fs.statSync(wwwPath).isDirectory()) return false;
+
+    fs.rmSync(wwwPath, { recursive: true, force: true });
+
+    const remaining = fs.readdirSync(workspacePath, { withFileTypes: true }).filter((entry) => !entry.name.startsWith('.'));
+    if (remaining.length === 0) {
+        fs.rmSync(workspacePath, { recursive: true, force: true });
+    }
+
+    return true;
+}

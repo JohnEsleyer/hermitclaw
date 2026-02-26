@@ -24,6 +24,7 @@ describe('sites-ui renderer', () => {
     expect(html).toContain('https://demo.example/preview/7/8080/');
     expect(html).toContain('Reveal Password');
     expect(html).toContain('js-regenerate-password');
+    expect(html).toContain('js-delete-site');
     expect(html).toContain('site-password-7-8080');
   });
 });

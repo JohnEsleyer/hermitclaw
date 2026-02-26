@@ -7,6 +7,7 @@
     <title>HermitShell Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="./calendar-symbols.js"></script>
     <script src="./sites-ui.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
@@ -595,7 +596,7 @@
                                 <input id="calendar-title" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" placeholder="Event title">
                                 <div class="grid grid-cols-2 gap-2">
                                     <input id="calendar-color" type="color" class="w-full h-11 bg-slate-800 border border-slate-700 rounded-lg p-1">
-                                    <input id="calendar-symbol" maxlength="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" placeholder="Symbol (e.g. ✨)">
+                                    <select id="calendar-symbol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white"></select>
                                 </div>
                                 <input id="calendar-start" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white">
                                 <input id="calendar-end" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white">
@@ -1683,6 +1684,9 @@
         let term = null;
         let fitAddon = null;
         let ws = null;
+        let termDataDisposable = null;
+        let reconnectAttempts = 0;
+        const MAX_TERMINAL_RECONNECT_ATTEMPTS = 2;
         let cachedAgents = [];
         let wizardStep = 1;
         let editingAgentId = null;
@@ -2656,6 +2660,21 @@
                     });
                 });
 
+                grid.querySelectorAll('.js-delete-site').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const agentId = button.getAttribute('data-agent-id');
+                        const userId = button.getAttribute('data-user-id');
+                        if (!confirm(`Delete published site for agent ${agentId} user ${userId}?`)) return;
+                        const res = await fetch(`/api/sites/${agentId}/${userId}`, { method: 'DELETE' });
+                        const body = await res.json();
+                        if (!res.ok) {
+                            alert(body.error || 'Failed to delete site');
+                            return;
+                        }
+                        await loadSites();
+                    });
+                });
+
                 lucide.createIcons();
             } catch (e) {
                 grid.innerHTML = '<div class="text-red-400">Failed to load sites.</div>';
@@ -2721,6 +2740,15 @@
 
         function formatDateKey(value) {
             return new Date(value).toISOString().slice(0, 10);
+        }
+
+        function initCalendarSymbolPicker(selected = '•') {
+            const select = document.getElementById('calendar-symbol');
+            if (!select || !window.CalendarSymbols) return;
+            const options = window.CalendarSymbols.CALENDAR_SYMBOL_OPTIONS || ['•'];
+            const current = window.CalendarSymbols.normalizeCalendarSymbol(selected);
+            select.innerHTML = options.map(symbol => `<option value="${symbol}">${symbol}</option>`).join('');
+            select.value = current;
         }
 
         function renderCalendarGrid() {
@@ -2849,7 +2877,7 @@
                 const colorInput = document.getElementById('calendar-color');
                 const symbolInput = document.getElementById('calendar-symbol');
                 if (colorInput && !colorInput.value) colorInput.value = '#3b82f6';
-                if (symbolInput && !symbolInput.value) symbolInput.value = '•';
+                if (symbolInput) initCalendarSymbolPicker(symbolInput.value || '•');
                 if (startInput && !startInput.value) {
                     const d = new Date();
                     d.setMinutes(0, 0, 0);
@@ -2869,7 +2897,7 @@
             const start = document.getElementById('calendar-start').value;
             const end = document.getElementById('calendar-end').value;
             const color = document.getElementById('calendar-color').value || '#3b82f6';
-            const symbol = (document.getElementById('calendar-symbol').value || '•').slice(0, 2);
+            const symbol = window.CalendarSymbols ? window.CalendarSymbols.normalizeCalendarSymbol(document.getElementById('calendar-symbol').value) : '•';
             const userId = Number(document.getElementById('calendar-user').value || 0);
 
             if (!agentId || !title || !prompt || !start || !userId) {
@@ -2902,7 +2930,7 @@
             document.getElementById('calendar-title').value = '';
             document.getElementById('calendar-prompt').value = '';
             document.getElementById('calendar-end').value = '';
-            document.getElementById('calendar-symbol').value = '•';
+            initCalendarSymbolPicker('•');
             await loadCalendarEvents();
         }
 
@@ -2917,13 +2945,13 @@
             if (promptText === null) return;
             const color = prompt('Edit color (hex like #3b82f6)', event.color || '#3b82f6');
             if (color === null) return;
-            const symbol = prompt('Edit symbol (1-2 chars)', event.symbol || '•');
-            if (symbol === null) return;
+            initCalendarSymbolPicker(event.symbol || '•');
+            const symbol = document.getElementById('calendar-symbol').value || '•';
 
             await fetch(`/api/agents/${agentId}/calendars/${eventId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: title.trim(), prompt: promptText.trim(), color: color.trim(), symbol: symbol.trim().slice(0, 2) })
+                body: JSON.stringify({ title: title.trim(), prompt: promptText.trim(), color: color.trim(), symbol: window.CalendarSymbols ? window.CalendarSymbols.normalizeCalendarSymbol(symbol) : '•' })
             });
             await loadCalendarEvents();
         }
@@ -3476,6 +3504,55 @@
             }
         }
 
+        function disconnectTerminalSocket() {
+            if (ws) {
+                ws.onopen = null;
+                ws.onmessage = null;
+                ws.onclose = null;
+                ws.onerror = null;
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function bindTerminalInput() {
+            if (!term || termDataDisposable) return;
+            termDataDisposable = term.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(btoa(data));
+                }
+            });
+        }
+
+        function connectTerminalSocket(containerId, displayName) {
+            disconnectTerminalSocket();
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${containerId}`);
+
+            ws.onopen = () => {
+                reconnectAttempts = 0;
+                term.writeln(`\x1b[32mConnected to ${displayName}\x1b[0m`);
+            };
+
+            ws.onmessage = (event) => {
+                term.write(atob(event.data));
+            };
+
+            ws.onclose = () => {
+                term.writeln('\x1b[33mDisconnected\x1b[0m');
+                if (currentContainerId && reconnectAttempts < MAX_TERMINAL_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts += 1;
+                    term.writeln(`\x1b[90mReconnecting (${reconnectAttempts}/${MAX_TERMINAL_RECONNECT_ATTEMPTS})...\x1b[0m`);
+                    setTimeout(() => connectTerminalSocket(currentContainerId, displayName), 1200);
+                }
+            };
+
+            ws.onerror = (err) => {
+                term.writeln('\x1b[31mConnection error\x1b[0m');
+                console.error(err);
+            };
+        }
+
         async function attachTerminal() {
             const containers = await fetch('/api/containers').then(r => r.json());
             if (!containers || containers.length === 0) {
@@ -3488,32 +3565,8 @@
 
             term.writeln(`\x1b[32mConnecting to ${runningContainer.Names[0]}...\x1b[0m`);
 
-            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${currentContainerId}`);
-
-            ws.onopen = () => {
-                term.writeln('\x1b[32mConnected!\x1b[0m');
-            };
-
-            ws.onmessage = (event) => {
-                const data = atob(event.data);
-                term.write(data);
-            };
-
-            ws.onclose = () => {
-                term.writeln('\x1b[33mDisconnected\x1b[0m');
-            };
-
-            ws.onerror = (err) => {
-                term.writeln('\x1b[31mConnection error\x1b[0m');
-                console.error(err);
-            };
-
-            term.onData((data) => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(btoa(data));
-                }
-            });
+            bindTerminalInput();
+            connectTerminalSocket(currentContainerId, runningContainer.Names[0]);
         }
 
         async function viewContainer(containerId) {
@@ -3537,34 +3590,14 @@
             document.getElementById('terminal-modal').classList.remove('hidden');
             term.writeln(`\x1b[32mAttaching to container ${containerId.substring(0, 12)}...\x1b[0m`);
 
-            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${location.host}/api/terminal/${containerId}`);
-
-            ws.onopen = () => {
-                term.writeln('\x1b[32mConnected!\x1b[0m');
-            };
-
-            ws.onmessage = (event) => {
-                const data = atob(event.data);
-                term.write(data);
-            };
-
-            ws.onclose = () => {
-                term.writeln('\x1b[33mDisconnected\x1b[0m');
-            };
-
-            term.onData((data) => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(btoa(data));
-                }
-            });
+            currentContainerId = containerId;
+            bindTerminalInput();
+            connectTerminalSocket(containerId, containerId.substring(0, 12));
         }
 
         function closeTerminal() {
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
+            reconnectAttempts = MAX_TERMINAL_RECONNECT_ATTEMPTS;
+            disconnectTerminalSocket();
             document.getElementById('terminal-modal').classList.add('hidden');
         }
 

@@ -15,7 +15,8 @@ import * as http from 'http';
 import { execFileSync } from 'child_process';
 import cookie from '@fastify/cookie';
 import { loadHistory, saveHistory, clearHistory } from './history';
-import { discoverSitesFromWorkspaces } from './sites';
+import { discoverSitesFromWorkspaces, deleteSiteWorkspace } from './sites';
+import { resolveDashboardStaticRoot } from './dashboard-static';
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'hermitshell-secret-change-in-production';
@@ -898,6 +899,23 @@ export async function startServer() {
                 return;
             }
 
+            let closed = false;
+            const cleanup = () => {
+                if (closed) return;
+                closed = true;
+                clearInterval(keepAlive);
+                try { (stream as any).end(); } catch { }
+                try { connection.socket.close(); } catch { }
+            };
+
+            const keepAlive = setInterval(() => {
+                if (connection.socket.readyState === 1) {
+                    connection.socket.ping();
+                    return;
+                }
+                cleanup();
+            }, 10000);
+
             (stream as any).on('data', (chunk: Buffer) => {
                 if (connection.socket.readyState === 1) {
                     connection.socket.send(chunk.toString('base64'));
@@ -905,7 +923,11 @@ export async function startServer() {
             });
 
             (stream as any).on('end', () => {
-                connection.socket.close();
+                cleanup();
+            });
+
+            (stream as any).on('error', () => {
+                cleanup();
             });
 
             connection.socket.on('message', (msg: any) => {
@@ -914,12 +936,12 @@ export async function startServer() {
             });
 
             connection.socket.on('close', () => {
-                (stream as any).end();
+                cleanup();
             });
 
             connection.socket.on('error', (err: Error) => {
                 console.error('WebSocket error:', err);
-                (stream as any).end();
+                cleanup();
             });
         } catch (err) {
             console.error('Terminal error:', err);
@@ -954,6 +976,19 @@ export async function startServer() {
             password: generated.password,
             updatedAt: new Date(generated.updatedAt).toISOString()
         };
+    });
+
+    fastify.delete('/api/sites/:agentId/:userId', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const userId = Number(request.params.userId);
+        if (!Number.isFinite(agentId) || !Number.isFinite(userId)) {
+            return reply.code(400).send({ error: 'Invalid agentId/userId' });
+        }
+
+        const removed = deleteSiteWorkspace(WORKSPACE_DIR, agentId, userId);
+        if (!removed) return reply.code(404).send({ error: 'Site not found' });
+
+        return { success: true };
     });
 
 
@@ -1232,8 +1267,10 @@ export async function startServer() {
         }
     });
 
+    const dashboardStaticRoot = resolveDashboardStaticRoot(__dirname);
+
     fastify.register(require('@fastify/static'), {
-        root: path.join(__dirname, '../dashboard/dist'),
+        root: dashboardStaticRoot,
         prefix: '/dashboard/',
         setHeaders: (res: any) => {
             res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -1266,6 +1303,7 @@ export async function startServer() {
     await fastify.listen({ port: Number(PORT), host: '0.0.0.0' });
     console.log(`🦀 Shell listening on port ${PORT}`);
     console.log(`📊 Dashboard available at http://localhost:${PORT}/dashboard/`);
+    console.log(`📁 Dashboard static root: ${dashboardStaticRoot}`);
 
     const existingUrl = await getSetting('public_url');
     if (!existingUrl || existingUrl === '') {
