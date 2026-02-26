@@ -15,16 +15,44 @@ import * as http from 'http';
 import { execFileSync } from 'child_process';
 import cookie from '@fastify/cookie';
 import { loadHistory, saveHistory, clearHistory } from './history';
+import { discoverSitesFromWorkspaces } from './sites';
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'hermitshell-secret-change-in-production';
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'hermitshell-webhook-secret';
 
 const pendingVerifications = new Map<string, { code: string; timestamp: number }>();
-const previewPasswords = new Map<string, string>();
+const previewPasswords = new Map<string, { password: string; updatedAt: number }>();
+
+function previewKey(agentId: number, port: number): string {
+    return `${agentId}_${port}`;
+}
+
+function generatePreviewPassword(): string {
+    return Math.random().toString(36).slice(2, 10);
+}
+
+export function getPreviewPassword(agentId: number, port: number): { password?: string; updatedAt?: number } | null {
+    return previewPasswords.get(previewKey(agentId, port)) || null;
+}
 
 export function setPreviewPassword(agentId: number, port: number, pass: string) {
-    previewPasswords.set(`${agentId}_${port}`, pass);
+    previewPasswords.set(previewKey(agentId, port), { password: pass, updatedAt: Date.now() });
+}
+
+export function ensurePreviewPassword(agentId: number, port: number): { password: string; updatedAt: number } {
+    const key = previewKey(agentId, port);
+    const existing = previewPasswords.get(key);
+    if (existing) return existing;
+    const created = { password: generatePreviewPassword(), updatedAt: Date.now() };
+    previewPasswords.set(key, created);
+    return created;
+}
+
+export function regeneratePreviewPassword(agentId: number, port: number): { password: string; updatedAt: number } {
+    const generated = { password: generatePreviewPassword(), updatedAt: Date.now() };
+    previewPasswords.set(previewKey(agentId, port), generated);
+    return generated;
 }
 
 export async function startServer() {
@@ -899,6 +927,34 @@ export async function startServer() {
 
     const WORKSPACE_DIR = path.join(__dirname, '../../data/workspaces');
 
+    fastify.get('/api/sites', async (_request: any, reply: any) => {
+        try {
+            const [agents, settings] = await Promise.all([getAllAgents(), getAllSettings()]);
+            const baseUrl = settings.public_url || `http://localhost:${PORT}`;
+            const sites = discoverSitesFromWorkspaces(WORKSPACE_DIR, agents, baseUrl, (agentId, port) => ensurePreviewPassword(agentId, port));
+            return { sites };
+        } catch (e: any) {
+            return reply.code(500).send({ error: e.message });
+        }
+    });
+
+    fastify.post('/api/sites/:agentId/:port/password/regenerate', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const port = Number(request.params.port);
+        if (!Number.isFinite(agentId) || !Number.isFinite(port)) {
+            return reply.code(400).send({ error: 'Invalid agentId/port' });
+        }
+
+        const generated = regeneratePreviewPassword(agentId, port);
+        return {
+            agentId,
+            port,
+            password: generated.password,
+            updatedAt: new Date(generated.updatedAt).toISOString()
+        };
+    });
+
+
     fastify.get('/api/files/:agentId/:userId', async (request: any, reply: any) => {
         const { agentId, userId } = request.params;
         const workspacePath = path.join(WORKSPACE_DIR, `${agentId}_${userId}`);
@@ -1013,7 +1069,8 @@ export async function startServer() {
         const { agentId, port, password } = request.body || {};
         const key = `${agentId}_${port}`;
 
-        if (previewPasswords.get(key) === password) {
+        const auth = previewPasswords.get(key);
+        if (auth?.password === password) {
             reply.setCookie(`preview_auth_${agentId}_${port}`, password, {
                 path: '/',
                 maxAge: 60 * 60 * 24,
@@ -1032,7 +1089,7 @@ export async function startServer() {
         const targetPort = parseInt(port, 10);
 
         const authKey = `${agentId}_${targetPort}`;
-        const expectedPassword = previewPasswords.get(authKey);
+        const expectedPassword = previewPasswords.get(authKey)?.password;
         if (expectedPassword) {
             const cookieName = `preview_auth_${agentId}_${targetPort}`;
             if (request.cookies[cookieName] !== expectedPassword) {
@@ -1115,7 +1172,7 @@ export async function startServer() {
         const targetPort = parseInt(port, 10);
 
         const authKey = `${agentId}_${targetPort}`;
-        const expectedPassword = previewPasswords.get(authKey);
+        const expectedPassword = previewPasswords.get(authKey)?.password;
         if (expectedPassword) {
             const cookieName = `preview_auth_${agentId}_${targetPort}`;
             if (request.cookies[cookieName] !== expectedPassword) {

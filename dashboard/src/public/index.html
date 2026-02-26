@@ -7,6 +7,7 @@
     <title>HermitShell Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="./sites-ui.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
@@ -473,7 +474,7 @@
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-bold text-white flex items-center gap-2">
                             <i data-lucide="globe" class="w-5 h-5 text-orange-500"></i>
-                            Sites (Deploy on Demand)
+                            Sites (Workspace Web Apps)
                         </h3>
                         <button onclick="loadSites()"
                             class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
@@ -482,14 +483,10 @@
                         </button>
                     </div>
                     <div class="glass-card p-5 rounded-2xl mb-5 text-sm text-slate-300">
-                        <p class="mb-2">Agents can build HTML/web apps inside their cubicle, run a local server, and
-                            share a public preview link when needed. Deployments are ephemeral and can be
-                            started/stopped on demand.</p>
-                        <p class="text-xs text-slate-400">Tip: use Terminal to run <span
-                                class="mono text-orange-300">python3 -m http.server 8080</span>, then share the
-                            generated preview URL to Telegram.</p>
+                        <p class="mb-2">HermitShell scans each workspace <span class="mono text-orange-300">www/</span> folder and lists detected web apps with tunnel preview URLs.</p>
+                        <p class="text-xs text-slate-400">Each preview can be password-protected. Use the controls below to reveal or regenerate the current password.</p>
                     </div>
-                    <div id="sites-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                    <div id="sites-grid" class="glass-card p-4 rounded-2xl"></div>
                 </div>
 
                 <!-- Files Section -->
@@ -2576,30 +2573,42 @@
             const grid = document.getElementById('sites-grid');
             if (!grid) return;
             try {
-                if (!cachedAgents.length) {
-                    const res = await fetch('/api/agents');
-                    cachedAgents = await res.json();
-                }
-                const settings = await fetch('/api/settings').then(r => r.json());
-                const baseUrl = settings.public_url || window.location.origin;
-                if (!cachedAgents.length) {
-                    grid.innerHTML = '<div class="text-slate-500">No agents yet. Spawn an agent first.</div>';
-                    return;
-                }
-                grid.innerHTML = cachedAgents.map(agent => `
-                    <div class="glass-card rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">${avatarImg(agent, true)}<h4 class="font-bold text-white">${agent.name}</h4></div>
-                            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">${agent.docker_image.split(':')[0]}</span>
-                        </div>
-                        <p class="text-xs text-slate-400 mb-3">Created by <span class="text-orange-300">${agent.name}</span> • port 8080 preview</p>
-                        <div class="bg-slate-900/70 border border-slate-700 rounded-lg p-2 text-xs mono text-orange-300 break-all mb-3">${baseUrl}/preview/${agent.id}/8080/</div>
-                        <div class="flex gap-2">
-                            <button onclick="openTerminal(${agent.id}, '${agent.name}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs py-2 rounded">Open Cubicle</button>
-                            <button onclick="navigator.clipboard.writeText('${baseUrl}/preview/${agent.id}/8080/')" class="flex-1 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/30 text-orange-300 text-xs py-2 rounded">Copy URL</button>
-                        </div>
-                    </div>
-                `).join('');
+                const data = await fetch('/api/sites').then(r => r.json());
+                const sites = data.sites || [];
+                grid.innerHTML = SitesUI.renderSitesTable(sites);
+
+                grid.querySelectorAll('.js-copy-site-url').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const target = button.getAttribute('data-copy-url') || '';
+                        navigator.clipboard.writeText(target);
+                    });
+                });
+
+                grid.querySelectorAll('.js-regenerate-password').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const agentId = button.getAttribute('data-agent-id');
+                        const port = button.getAttribute('data-port');
+                        const res = await fetch(`/api/sites/${agentId}/${port}/password/regenerate`, { method: 'POST' });
+                        const body = await res.json();
+                        if (!res.ok) {
+                            alert(body.error || 'Failed to regenerate password');
+                            return;
+                        }
+                        const holder = document.getElementById(`site-password-${agentId}-${port}`);
+                        if (holder) holder.textContent = body.password;
+                    });
+                });
+
+                grid.querySelectorAll('.js-reveal-password').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const agentId = button.getAttribute('data-agent-id');
+                        const data = await fetch('/api/sites').then(r => r.json());
+                        const site = (data.sites || []).find(s => String(s.agentId) === String(agentId));
+                        const holder = document.getElementById(`site-password-${agentId}-8080`);
+                        if (holder) holder.textContent = site?.password || (site?.hasPassword ? '••••••••' : 'Not set');
+                    });
+                });
+
                 lucide.createIcons();
             } catch (e) {
                 grid.innerHTML = '<div class="text-red-400">Failed to load sites.</div>';
