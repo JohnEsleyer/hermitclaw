@@ -286,6 +286,11 @@
                     <i data-lucide="folder-open" class="w-5 h-5"></i>
                     <span>Files</span>
                 </a>
+                <a href="#" onclick="showSection('calendars')"
+                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                    <i data-lucide="calendar-days" class="w-5 h-5"></i>
+                    <span>Calendars</span>
+                </a>
                 <a href="#" onclick="showSection('audit')"
                     class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
                     <i data-lucide="file-text" class="w-5 h-5"></i>
@@ -514,6 +519,54 @@
                     </div>
                     <div id="files-browser" class="glass-card rounded-2xl p-5 text-sm text-slate-300">
                         Select an agent and user, then click <strong>Load Workspace</strong>.
+                    </div>
+                </div>
+
+                <!-- Calendars Section -->
+                <div id="section-calendars" class="hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="calendar-days" class="w-5 h-5 text-orange-500"></i>
+                            Agent Calendars
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="shiftCalendarMonth(-1)" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-700 text-sm">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </button>
+                            <div id="calendar-month-label" class="text-sm text-slate-300 min-w-[150px] text-center">Month</div>
+                            <button onclick="shiftCalendarMonth(1)" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-700 text-sm">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="loadCalendarsSection()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700"><i data-lucide="refresh-cw" class="w-4 h-4"></i>Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+                        <div class="xl:col-span-2 glass-card p-4 rounded-2xl">
+                            <div class="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2 font-mono text-center">
+                                <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+                            </div>
+                            <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+                        </div>
+
+                        <div class="glass-card p-4 rounded-2xl">
+                            <h4 class="text-sm font-bold text-white mb-3">Create Event</h4>
+                            <div class="space-y-3">
+                                <select id="calendar-agent" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" onchange="loadCalendarEvents()"></select>
+                                <select id="calendar-user" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white"></select>
+                                <input id="calendar-title" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" placeholder="Event title">
+                                <input id="calendar-start" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white">
+                                <input id="calendar-end" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white">
+                                <textarea id="calendar-prompt" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" placeholder="Prompt/event instructions for the agent..."></textarea>
+                                <button onclick="createCalendarEvent()" class="w-full bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">Add Event</button>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-3">Events run automatically and notify Telegram on start + completion.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 id="calendar-selected-date" class="text-sm font-bold text-white mb-3">Selected day events</h4>
+                        <div id="calendar-events" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
                     </div>
                 </div>
 
@@ -1720,6 +1773,7 @@
             document.getElementById('section-cubicles').classList.add('hidden');
             document.getElementById('section-sites').classList.add('hidden');
             document.getElementById('section-files').classList.add('hidden');
+            document.getElementById('section-calendars').classList.add('hidden');
             document.getElementById('section-memories').classList.add('hidden');
             document.getElementById('section-' + section).classList.remove('hidden');
 
@@ -1732,6 +1786,7 @@
                 'allowlist': 'User Allowlist',
                 'sites': 'Sites',
                 'files': 'Files',
+                'calendars': 'Calendars',
                 'memories': 'Agent Memories'
             };
             document.getElementById('page-title').innerText = titles[section] || 'Mission Control';
@@ -1743,6 +1798,7 @@
             if (section === 'cubicles') loadCubicles();
             if (section === 'sites') loadSites();
             if (section === 'files') loadFilesSection();
+            if (section === 'calendars') loadCalendarsSection();
             if (section === 'memories') loadMemoriesSection();
         }
 
@@ -2601,6 +2657,201 @@
             } catch (e) {
                 browser.innerHTML = '<span class="text-red-400">Failed to load workspace files.</span>';
             }
+        }
+
+        let calendarEventsCache = [];
+        let calendarCurrentMonth = new Date();
+        let calendarSelectedDate = new Date().toISOString().slice(0, 10);
+
+        function formatDateKey(value) {
+            return new Date(value).toISOString().slice(0, 10);
+        }
+
+        function renderCalendarGrid() {
+            const grid = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('calendar-month-label');
+            if (!grid || !monthLabel) return;
+
+            const year = calendarCurrentMonth.getFullYear();
+            const month = calendarCurrentMonth.getMonth();
+            monthLabel.innerText = calendarCurrentMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1);
+            const startOffset = firstDay.getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const countByDay = {};
+            calendarEventsCache.forEach(ev => {
+                const key = formatDateKey(ev.start_time);
+                countByDay[key] = (countByDay[key] || 0) + 1;
+            });
+
+            const cells = [];
+            for (let i = 0; i < startOffset; i++) {
+                cells.push('<div class="h-24 rounded-lg border border-slate-800 bg-slate-900/30"></div>');
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const key = date.toISOString().slice(0, 10);
+                const isSelected = key === calendarSelectedDate;
+                const isToday = key === new Date().toISOString().slice(0, 10);
+                const count = countByDay[key] || 0;
+
+                cells.push(`
+                    <button onclick="selectCalendarDate('${key}')" class="h-24 rounded-lg border p-2 text-left transition ${isSelected ? 'border-orange-500 bg-orange-500/10' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800/60'}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm ${isToday ? 'text-orange-400 font-bold' : 'text-slate-200'}">${day}</span>
+                            ${count ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300">${count}</span>` : ''}
+                        </div>
+                        <div class="mt-2 space-y-1">
+                            ${(calendarEventsCache.filter(ev => formatDateKey(ev.start_time) === key).slice(0, 2).map(ev => `<div class="text-[10px] truncate text-slate-300">• ${ev.title}</div>`).join(''))}
+                        </div>
+                    </button>
+                `);
+            }
+
+            grid.innerHTML = cells.join('');
+            renderSelectedDateEvents();
+            lucide.createIcons();
+        }
+
+        function selectCalendarDate(dateKey) {
+            calendarSelectedDate = dateKey;
+            renderCalendarGrid();
+        }
+
+        function shiftCalendarMonth(delta) {
+            calendarCurrentMonth = new Date(calendarCurrentMonth.getFullYear(), calendarCurrentMonth.getMonth() + delta, 1);
+            renderCalendarGrid();
+        }
+
+        function renderSelectedDateEvents() {
+            const panel = document.getElementById('calendar-events');
+            const title = document.getElementById('calendar-selected-date');
+            if (!panel || !title) return;
+
+            title.innerText = `Events • ${new Date(calendarSelectedDate + 'T00:00:00').toLocaleDateString()}`;
+            const events = calendarEventsCache.filter(ev => formatDateKey(ev.start_time) === calendarSelectedDate);
+
+            if (!events.length) {
+                panel.innerHTML = '<div class="glass-card p-4 rounded-xl text-slate-400 text-sm">No events scheduled for this day.</div>';
+                return;
+            }
+
+            panel.innerHTML = events.map(ev => `
+                <div class="glass-card p-4 rounded-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="font-semibold text-white">${ev.title}</h5>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-800 text-slate-300">${ev.status}</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mb-2">${new Date(ev.start_time).toLocaleString()}${ev.end_time ? ` → ${new Date(ev.end_time).toLocaleString()}` : ''}</div>
+                    <div class="text-sm text-slate-300 whitespace-pre-wrap mb-3">${ev.prompt}</div>
+                    <div class="flex gap-2">
+                        <button onclick="markCalendarCancelled(${ev.agent_id}, ${ev.id})" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1 rounded">Cancel</button>
+                        <button onclick="deleteCalendarEvent(${ev.agent_id}, ${ev.id})" class="bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 text-xs px-3 py-1 rounded">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadCalendarsSection() {
+            const agentSelect = document.getElementById('calendar-agent');
+            const userSelect = document.getElementById('calendar-user');
+            if (!agentSelect || !userSelect) return;
+            try {
+                const [agentsRes, usersRes] = await Promise.all([fetch('/api/agents'), fetch('/api/allowlist')]);
+                const agents = await agentsRes.json();
+                const users = await usersRes.json();
+                cachedAgents = agents;
+                agentSelect.innerHTML = agents.map(a => `<option value="${a.id}">${a.name} (#${a.id})</option>`).join('') || '<option value="">No agents</option>';
+                userSelect.innerHTML = users.map(u => `<option value="${u.user_id}">${u.first_name || u.username || u.user_id} (${u.user_id})</option>`).join('') || '<option value="">No users</option>';
+
+                if (users.length) userSelect.value = String(users[0].user_id);
+
+                await loadCalendarEvents();
+            } catch (e) {
+                document.getElementById('calendar-events').innerHTML = '<div class="glass-card p-4 rounded-xl text-red-400">Failed to load calendar section.</div>';
+            }
+        }
+
+        async function loadCalendarEvents() {
+            const agentId = document.getElementById('calendar-agent').value;
+            if (!agentId) {
+                calendarEventsCache = [];
+                renderCalendarGrid();
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/agents/${agentId}/calendars`);
+                const data = await res.json();
+                calendarEventsCache = data.events || [];
+
+                const startInput = document.getElementById('calendar-start');
+                if (startInput && !startInput.value) {
+                    const d = new Date();
+                    d.setMinutes(0, 0, 0);
+                    startInput.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                }
+
+                renderCalendarGrid();
+            } catch (e) {
+                document.getElementById('calendar-events').innerHTML = '<div class="glass-card p-4 rounded-xl text-red-400">Failed to load events.</div>';
+            }
+        }
+
+        async function createCalendarEvent() {
+            const agentId = document.getElementById('calendar-agent').value;
+            const title = document.getElementById('calendar-title').value.trim();
+            const prompt = document.getElementById('calendar-prompt').value.trim();
+            const start = document.getElementById('calendar-start').value;
+            const end = document.getElementById('calendar-end').value;
+            const userId = Number(document.getElementById('calendar-user').value || 0);
+
+            if (!agentId || !title || !prompt || !start || !userId) {
+                alert('Please fill agent, user, title, prompt, and start time.');
+                return;
+            }
+
+            const payload = {
+                title,
+                prompt,
+                start_time: new Date(start).toISOString(),
+                end_time: end ? new Date(end).toISOString() : null,
+                target_user_id: userId
+            };
+
+            const res = await fetch(`/api/agents/${agentId}/calendars`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.error || 'Failed to create event');
+                return;
+            }
+
+            document.getElementById('calendar-title').value = '';
+            document.getElementById('calendar-prompt').value = '';
+            document.getElementById('calendar-end').value = '';
+            await loadCalendarEvents();
+        }
+
+        async function deleteCalendarEvent(agentId, eventId) {
+            await fetch(`/api/agents/${agentId}/calendars/${eventId}`, { method: 'DELETE' });
+            await loadCalendarEvents();
+        }
+
+        async function markCalendarCancelled(agentId, eventId) {
+            await fetch(`/api/agents/${agentId}/calendars/${eventId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'cancelled' })
+            });
+            await loadCalendarEvents();
         }
 
         async function loadAuditLogs() {

@@ -1,10 +1,10 @@
-import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands, registerWebhook, startFileWatcher } from './telegram';
+import { handleTelegramUpdate, sendTelegramMessage, smartReply, processAgentMessage, sendVerificationCode, setBotCommands, registerWebhook, startFileWatcher, startCalendarScheduler } from './telegram';
 import {
     getAllAgents, isAllowed, initDb, getAdminCount, createAdmin, getAdmin, getFirstAdmin, updateAdmin,
     getAllSettings, setSetting, getBudget, getAllowlist, addToAllowlist, removeFromAllowlist,
     getTotalSpend, getAllBudgets, updateAgent, deleteAgent, updateBudget, createAgent,
     getAuditLogs, getAgentById, getAgentByToken, getSetting, setOperator, getOperator,
-    createAgentRuntimeLog, getAgentRuntimeLogs
+    createAgentRuntimeLog, getAgentRuntimeLogs, getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getCalendarEventById
 } from './db';
 import { checkDocker, listContainers, getContainerExec, docker, spawnAgent, restartAgentContainer } from './docker';
 import { hashPassword, verifyPassword, generateSessionToken } from './auth';
@@ -30,6 +30,7 @@ export function setPreviewPassword(agentId: number, port: number, pass: string) 
 export async function startServer() {
     await initDb();
     startFileWatcher();
+    startCalendarScheduler();
 
     const fastify = require('fastify')({ logger: true });
 
@@ -361,6 +362,65 @@ export async function startServer() {
                 budget: budget || { daily_limit_usd: 1, current_spend_usd: 0 }
             };
         });
+    });
+
+    fastify.get('/api/agents/:agentId/calendars', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+        const events = await getCalendarEvents(agentId);
+        return { events };
+    });
+
+    fastify.post('/api/agents/:agentId/calendars', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+
+        const { title, prompt, start_time, end_time, target_user_id } = request.body || {};
+        if (!title || !prompt || !start_time || !target_user_id) {
+            return reply.code(400).send({ error: 'title, prompt, start_time and target_user_id are required' });
+        }
+
+        const id = await createCalendarEvent({
+            agent_id: agentId,
+            title: String(title),
+            prompt: String(prompt),
+            start_time: String(start_time),
+            end_time: end_time ? String(end_time) : null,
+            target_user_id: Number(target_user_id)
+        });
+        return { success: true, id };
+    });
+
+    fastify.put('/api/agents/:agentId/calendars/:eventId', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const eventId = Number(request.params.eventId);
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+        const event = await getCalendarEventById(eventId);
+        if (!event || event.agent_id !== agentId) return reply.code(404).send({ error: 'Calendar event not found' });
+
+        const allowed = ['title', 'prompt', 'start_time', 'end_time', 'target_user_id', 'status'];
+        const updates: any = {};
+        for (const key of allowed) {
+            if (request.body?.[key] !== undefined) updates[key] = request.body[key];
+        }
+        if (updates.target_user_id !== undefined) updates.target_user_id = Number(updates.target_user_id);
+
+        await updateCalendarEvent(eventId, updates);
+        return { success: true };
+    });
+
+    fastify.delete('/api/agents/:agentId/calendars/:eventId', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const eventId = Number(request.params.eventId);
+        const agent = await getAgentById(agentId);
+        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
+        const event = await getCalendarEventById(eventId);
+        if (!event || event.agent_id !== agentId) return reply.code(404).send({ error: 'Calendar event not found' });
+        await deleteCalendarEvent(eventId);
+        return { success: true };
     });
 
     fastify.post('/api/agents/request-verification', async (request: any, reply: any) => {

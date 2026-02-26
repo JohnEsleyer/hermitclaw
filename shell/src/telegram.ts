@@ -1,4 +1,4 @@
-import { getAgentByToken, isAllowed, getBudget, updateSpend, canSpend, updateAuditLog, getAgentById, getSetting, getOperator, getActiveMeetings, createMeeting, updateMeetingTranscript, closeMeeting, getAllAgents, createAgentRuntimeLog } from './db';
+import { getAgentByToken, isAllowed, getBudget, updateSpend, canSpend, updateAuditLog, getAgentById, getSetting, getOperator, getActiveMeetings, createMeeting, updateMeetingTranscript, closeMeeting, getAllAgents, createAgentRuntimeLog, claimDueCalendarEvents, updateCalendarEvent } from './db';
 import { spawnAgent, docker, getCubicleStatus, stopCubicle, removeCubicle, listContainers } from './docker';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,6 +32,7 @@ const TELEGRAM_MAX_LENGTH = 4000;
 const WORKSPACE_DIR = path.join(__dirname, '../../data/workspaces');
 
 const pendingDelegations = new Map<string, { agentId: number; role: string; task: string; timestamp: number }>();
+let calendarSchedulerStarted = false;
 
 export async function sendChatAction(token: string, chatId: number, action: 'typing' | 'upload_document' = 'typing'): Promise<void> {
     const url = `https://api.telegram.org/bot${token}/sendChatAction`;
@@ -695,6 +696,49 @@ export async function sendTelegramMessage(token: string, chatId: number, text: s
         console.error('Failed to send Telegram message:', err);
         return undefined;
     }
+}
+
+export function startCalendarScheduler(): void {
+    if (calendarSchedulerStarted) return;
+    calendarSchedulerStarted = true;
+
+    const tick = async () => {
+        const nowIso = new Date().toISOString();
+        const dueEvents = await claimDueCalendarEvents(nowIso);
+
+        for (const event of dueEvents) {
+            try {
+                const agent = await getAgentById(event.agent_id);
+                if (!agent || !agent.telegram_token) {
+                    await updateCalendarEvent(event.id, {
+                        status: 'failed',
+                        completed_at: new Date().toISOString(),
+                        last_error: 'Agent not found or missing Telegram token'
+                    });
+                    continue;
+                }
+
+                await sendTelegramMessage(agent.telegram_token, event.target_user_id, `📅 Event started: *${event.title}*\n\n${event.prompt}`);
+                const result = await processAgentMessage(agent.telegram_token, event.target_user_id, event.target_user_id, event.prompt);
+                await sendTelegramMessage(agent.telegram_token, event.target_user_id, `✅ Event finished: *${event.title}*\n\n${result.output.slice(0, 3000)}`);
+
+                await updateCalendarEvent(event.id, {
+                    status: 'completed',
+                    completed_at: new Date().toISOString(),
+                    last_error: null
+                });
+            } catch (e: any) {
+                await updateCalendarEvent(event.id, {
+                    status: 'failed',
+                    completed_at: new Date().toISOString(),
+                    last_error: String(e?.message || e).slice(0, 500)
+                });
+            }
+        }
+    };
+
+    tick().catch((e) => console.error('[CalendarScheduler] Initial tick error:', e));
+    setInterval(() => tick().catch((e) => console.error('[CalendarScheduler] Tick error:', e)), 30000);
 }
 
 export async function editMessageText(token: string, chatId: number, messageId: number, text: string): Promise<boolean> {
