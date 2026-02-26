@@ -79,6 +79,22 @@ export interface AgentRuntimeLog {
     created_at: string;
 }
 
+export interface CalendarEvent {
+    id: number;
+    agent_id: number;
+    title: string;
+    prompt: string;
+    start_time: string;
+    end_time: string | null;
+    target_user_id: number;
+    status: 'scheduled' | 'running' | 'completed' | 'failed' | 'cancelled';
+    last_error?: string | null;
+    started_at?: string | null;
+    completed_at?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export async function initDb(): Promise<void> {
     const db = await getClient();
 
@@ -171,6 +187,23 @@ export async function initDb(): Promise<void> {
             message TEXT,
             context TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agent_id) REFERENCES agents(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT,
+            target_user_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'scheduled',
+            last_error TEXT,
+            started_at DATETIME,
+            completed_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (agent_id) REFERENCES agents(id)
         );
     `);
@@ -339,8 +372,113 @@ export async function deleteAgent(id: number): Promise<void> {
     await db.execute({ sql: 'DELETE FROM budgets WHERE agent_id = ?', args: [id] });
     await db.execute({ sql: 'DELETE FROM audit_logs WHERE agent_id = ?', args: [id] });
     await db.execute({ sql: 'DELETE FROM agent_memory WHERE agent_id = ?', args: [id] });
+    await db.execute({ sql: 'DELETE FROM calendar_events WHERE agent_id = ?', args: [id] });
     await db.execute({ sql: 'DELETE FROM agent_runtime_logs WHERE agent_id = ?', args: [id] });
     await db.execute({ sql: 'DELETE FROM agents WHERE id = ?', args: [id] });
+}
+
+export async function createCalendarEvent(event: {
+    agent_id: number;
+    title: string;
+    prompt: string;
+    start_time: string;
+    end_time?: string | null;
+    target_user_id: number;
+}): Promise<number> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: `INSERT INTO calendar_events (agent_id, title, prompt, start_time, end_time, target_user_id, status)
+              VALUES (?, ?, ?, ?, ?, ?, 'scheduled')`,
+        args: [event.agent_id, event.title, event.prompt, event.start_time, event.end_time || null, event.target_user_id]
+    });
+    return Number(rs.lastInsertRowid);
+}
+
+export async function getCalendarEvents(agentId?: number): Promise<CalendarEvent[]> {
+    const db = await getClient();
+    if (agentId) {
+        const rs = await db.execute({
+            sql: 'SELECT * FROM calendar_events WHERE agent_id = ? ORDER BY start_time ASC',
+            args: [agentId]
+        });
+        return rs.rows as unknown as CalendarEvent[];
+    }
+
+    const rs = await db.execute('SELECT * FROM calendar_events ORDER BY start_time ASC');
+    return rs.rows as unknown as CalendarEvent[];
+}
+
+
+export async function getCalendarEventById(id: number): Promise<CalendarEvent | undefined> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: 'SELECT * FROM calendar_events WHERE id = ?',
+        args: [id]
+    });
+    if (rs.rows.length > 0) {
+        return rs.rows[0] as unknown as CalendarEvent;
+    }
+    return undefined;
+}
+
+export async function updateCalendarEvent(id: number, updates: Partial<CalendarEvent>): Promise<void> {
+    const db = await getClient();
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
+    if (updates.prompt !== undefined) { fields.push('prompt = ?'); values.push(updates.prompt); }
+    if (updates.start_time !== undefined) { fields.push('start_time = ?'); values.push(updates.start_time); }
+    if (updates.end_time !== undefined) { fields.push('end_time = ?'); values.push(updates.end_time); }
+    if (updates.target_user_id !== undefined) { fields.push('target_user_id = ?'); values.push(updates.target_user_id); }
+    if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
+    if (updates.last_error !== undefined) { fields.push('last_error = ?'); values.push(updates.last_error); }
+    if (updates.started_at !== undefined) { fields.push('started_at = ?'); values.push(updates.started_at); }
+    if (updates.completed_at !== undefined) { fields.push('completed_at = ?'); values.push(updates.completed_at); }
+
+    if (!fields.length) return;
+
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+    await db.execute({
+        sql: `UPDATE calendar_events SET ${fields.join(', ')} WHERE id = ?`,
+        args: values
+    });
+}
+
+export async function deleteCalendarEvent(id: number): Promise<void> {
+    const db = await getClient();
+    await db.execute({ sql: 'DELETE FROM calendar_events WHERE id = ?', args: [id] });
+}
+
+export async function claimDueCalendarEvents(nowIso: string): Promise<CalendarEvent[]> {
+    const db = await getClient();
+    const rs = await db.execute({
+        sql: `SELECT * FROM calendar_events
+              WHERE status = 'scheduled'
+                AND start_time <= ?
+                AND (end_time IS NULL OR end_time >= ?)
+              ORDER BY start_time ASC`,
+        args: [nowIso, nowIso]
+    });
+
+    const due = rs.rows as unknown as CalendarEvent[];
+    const claimed: CalendarEvent[] = [];
+
+    for (const event of due) {
+        const update = await db.execute({
+            sql: `UPDATE calendar_events
+                  SET status = 'running', started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                  WHERE id = ? AND status = 'scheduled'`,
+            args: [event.id]
+        });
+
+        if (Number(update.rowsAffected || 0) > 0) {
+            claimed.push({ ...event, status: 'running' });
+        }
+    }
+
+    return claimed;
 }
 
 export async function getBudget(agentId: number): Promise<Budget | undefined> {
