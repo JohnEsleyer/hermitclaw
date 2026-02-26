@@ -174,6 +174,87 @@
             border: 1px solid rgba(148, 163, 184, .2);
             border-radius: 18px 18px 18px 6px;
         }
+
+
+        .dashboard-shell {
+            display: grid;
+            grid-template-columns: 18rem minmax(0, 1fr);
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .dashboard-sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .dashboard-main {
+            min-width: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-topbar {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(16px);
+        }
+
+        .dashboard-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .dashboard-content-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .mobile-nav {
+            display: none;
+            gap: .65rem;
+            overflow-x: auto;
+            padding-bottom: .15rem;
+        }
+
+        .mobile-nav .nav-item {
+            white-space: nowrap;
+            padding: .6rem .95rem;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 999px;
+            font-size: .8rem;
+            line-height: 1;
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .desktop-nav .nav-item {
+            border: 1px solid transparent;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-sidebar {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            .dashboard-content {
+                padding: 1rem;
+            }
+        }
+
     </style>
 </head>
 
@@ -254,120 +335,80 @@
     </div>
 
     <!-- Dashboard -->
-    <div id="dashboard-ui" class="hidden flex w-full h-full">
-        <aside class="w-64 glass-panel flex flex-col z-20 h-full fixed md:relative hidden md:flex">
+    <div id="dashboard-ui" class="hidden dashboard-shell">
+        <aside class="dashboard-sidebar glass-panel dashboard-sidebar flex-col z-20 hidden xl:flex">
             <div class="p-6 flex items-center space-x-3 border-b border-white/5">
-                <svg viewBox="0 0 100 100" class="w-8 h-8 fill-orange-500 shrink-0">
+                <svg viewBox="0 0 100 100" class="w-9 h-9 fill-orange-500 shrink-0">
                     <path
                         d="M50 20C30 20 20 35 20 50C20 65 30 80 50 80C70 80 80 65 80 50C80 35 70 20 50 20ZM35 45C37.7 45 40 47.3 40 50C40 52.7 37.7 55 35 55C32.3 55 30 52.7 30 50C30 47.3 32.3 45 35 45ZM65 45C67.7 45 70 47.3 70 50C70 52.7 67.7 55 65 55C62.3 55 60 52.7 60 50C60 47.3 62.3 45 65 45Z" />
                     <path d="M15 30L25 40M10 50L25 50M15 70L25 60M85 30L75 40M90 50L75 50M85 70L75 60" stroke="#ff6b35"
                         stroke-width="5" stroke-linecap="round" />
                 </svg>
-                <h1 class="font-bold tracking-tight text-lg text-white">HermitShell</h1>
+                <div>
+                    <h1 class="font-bold tracking-tight text-lg text-white">HermitShell</h1>
+                    <p class="text-[11px] text-slate-400 mono">CONTROL SURFACE</p>
+                </div>
             </div>
 
-            <nav class="flex-1 p-4 space-y-2">
-                <a href="#" onclick="showSection('agents')"
+            <nav class="desktop-nav flex-1 p-4 space-y-2">
+                <a href="#" data-section="agents" onclick="showSection('agents')"
                     class="nav-item flex items-center space-x-3 px-4 py-3 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl">
-                    <i data-lucide="grid" class="w-5 h-5"></i>
-                    <span class="font-semibold">Agents</span>
+                    <i data-lucide="grid" class="w-5 h-5"></i><span class="font-semibold">Agents</span>
                 </a>
-                <a href="#" onclick="showSection('cubicles')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="box" class="w-5 h-5"></i>
-                    <span>Cubicles</span>
-                </a>
-                <a href="#" onclick="showSection('sites')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="globe" class="w-5 h-5"></i>
-                    <span>Sites</span>
-                </a>
-                <a href="#" onclick="showSection('files')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="folder-open" class="w-5 h-5"></i>
-                    <span>Files</span>
-                </a>
-                <a href="#" onclick="showSection('calendars')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="calendar-days" class="w-5 h-5"></i>
-                    <span>Calendars</span>
-                </a>
-                <a href="#" onclick="showSection('audit')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="file-text" class="w-5 h-5"></i>
-                    <span>Audit Logs</span>
-                </a>
-                <a href="#" onclick="showSection('metrics')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
-                    <span>Metrics</span>
-                </a>
-                <a href="#" onclick="showSection('allowlist')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="users" class="w-5 h-5"></i>
-                    <span>Allowlist</span>
-                </a>
-                <a href="#" onclick="showSection('memories')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="brain" class="w-5 h-5"></i>
-                    <span>Memories (RAG)</span>
-                </a>
-                <a href="#" onclick="showSection('settings')"
-                    class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="settings" class="w-5 h-5"></i>
-                    <span>Settings</span>
-                </a>
+                <a href="#" data-section="cubicles" onclick="showSection('cubicles')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="box" class="w-5 h-5"></i><span>Cubicles</span></a>
+                <a href="#" data-section="sites" onclick="showSection('sites')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="globe" class="w-5 h-5"></i><span>Sites</span></a>
+                <a href="#" data-section="files" onclick="showSection('files')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="folder-open" class="w-5 h-5"></i><span>Files</span></a>
+                <a href="#" data-section="calendars" onclick="showSection('calendars')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="calendar-days" class="w-5 h-5"></i><span>Calendars</span></a>
+                <a href="#" data-section="audit" onclick="showSection('audit')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="file-text" class="w-5 h-5"></i><span>Audit Logs</span></a>
+                <a href="#" data-section="metrics" onclick="showSection('metrics')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="bar-chart-2" class="w-5 h-5"></i><span>Metrics</span></a>
+                <a href="#" data-section="allowlist" onclick="showSection('allowlist')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="users" class="w-5 h-5"></i><span>Allowlist</span></a>
+                <a href="#" data-section="memories" onclick="showSection('memories')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="brain" class="w-5 h-5"></i><span>Memories (RAG)</span></a>
+                <a href="#" data-section="settings" onclick="showSection('settings')" class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i data-lucide="settings" class="w-5 h-5"></i><span>Settings</span></a>
             </nav>
 
             <div class="p-6">
-                <button onclick="logout()"
-                    class="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-                    <i data-lucide="log-out" class="w-5 h-5"></i>
-                    <span>Logout</span>
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors border border-slate-700/50">
+                    <i data-lucide="log-out" class="w-5 h-5"></i><span>Logout</span>
                 </button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col relative z-10 overflow-hidden">
-            <!-- Security Warning Banner -->
-            <div id="default-creds-warning"
-                class="hidden bg-red-900/40 border-b border-red-500/50 text-red-200 px-8 py-3 flex justify-between items-center text-sm shadow-md">
-                <div class="flex items-center gap-3">
-                    <div class="p-1.5 bg-red-500/20 rounded-lg"><i data-lucide="alert-triangle"
-                            class="w-4 h-4 text-red-500"></i></div>
-                    <span><strong>SECURITY WARNING:</strong> You are using default admin credentials. Please change your
-                        password in Settings.</span>
-                </div>
-                <button onclick="showSection('settings')"
-                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">
-                    Change Password <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                </button>
+        <main class="dashboard-main relative z-10 overflow-hidden">
+            <div id="default-creds-warning" class="hidden bg-red-900/40 border-b border-red-500/50 text-red-200 px-6 py-3 flex justify-between items-center text-sm shadow-md">
+                <div class="flex items-center gap-3"><div class="p-1.5 bg-red-500/20 rounded-lg"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i></div><span><strong>SECURITY WARNING:</strong> You are using default admin credentials. Please change your password in Settings.</span></div>
+                <button onclick="showSection('settings')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">Change Password <i data-lucide="arrow-right" class="w-3 h-3"></i></button>
             </div>
 
-            <header
-                class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-sm">
-                <div>
-                    <h2 class="text-2xl font-bold text-white" id="page-title">Mission Control</h2>
-                    <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span
-                            class="text-green-400">SECURE</span></p>
-                </div>
-
-                <div class="flex items-center space-x-4">
-                    <button onclick="syncWebhooks(event)"
-                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2"
-                        title="Reconnect bots to Telegram">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">Sync Bots</span>
-                    </button>
-                    <button onclick="openModal()"
-                        class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        <span>Spawn Agent</span>
-                    </button>
+            <header class="dashboard-topbar px-4 md:px-8 py-5">
+                <div class="dashboard-content-inner flex flex-col gap-4">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white" id="page-title">Mission Control</h2>
+                            <p class="text-xs text-slate-400 mono mt-1">SYSTEM_STATUS: <span class="text-green-400">SECURE</span></p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="syncWebhooks(event)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2" title="Reconnect bots to Telegram"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">Sync Bots</span></button>
+                            <button onclick="openModal()" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i><span>Spawn Agent</span></button>
+                        </div>
+                    </div>
+                    <nav class="mobile-nav">
+                        <a href="#" data-section="agents" onclick="showSection('agents')" class="nav-item bg-orange-500/10 text-orange-400 border-orange-500/20"><i data-lucide="grid" class="w-4 h-4 inline mr-1"></i>Agents</a>
+                        <a href="#" data-section="cubicles" onclick="showSection('cubicles')" class="nav-item text-slate-300"><i data-lucide="box" class="w-4 h-4 inline mr-1"></i>Cubicles</a>
+                        <a href="#" data-section="sites" onclick="showSection('sites')" class="nav-item text-slate-300"><i data-lucide="globe" class="w-4 h-4 inline mr-1"></i>Sites</a>
+                        <a href="#" data-section="files" onclick="showSection('files')" class="nav-item text-slate-300"><i data-lucide="folder-open" class="w-4 h-4 inline mr-1"></i>Files</a>
+                        <a href="#" data-section="calendars" onclick="showSection('calendars')" class="nav-item text-slate-300"><i data-lucide="calendar-days" class="w-4 h-4 inline mr-1"></i>Calendars</a>
+                        <a href="#" data-section="audit" onclick="showSection('audit')" class="nav-item text-slate-300"><i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>Audit</a>
+                        <a href="#" data-section="metrics" onclick="showSection('metrics')" class="nav-item text-slate-300"><i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-1"></i>Metrics</a>
+                        <a href="#" data-section="allowlist" onclick="showSection('allowlist')" class="nav-item text-slate-300"><i data-lucide="users" class="w-4 h-4 inline mr-1"></i>Allowlist</a>
+                        <a href="#" data-section="memories" onclick="showSection('memories')" class="nav-item text-slate-300"><i data-lucide="brain" class="w-4 h-4 inline mr-1"></i>Memories</a>
+                        <a href="#" data-section="settings" onclick="showSection('settings')" class="nav-item text-slate-300"><i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>Settings</a>
+                    </nav>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-8">
+            <div class="dashboard-content">
+                <div class="dashboard-content-inner">
+
                 <!-- Agents Section -->
                 <div id="section-agents">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -980,10 +1021,6 @@
                 </div>
             </div>
         </main>
-    </div>
-    </div>
-    </div>
-    </main>
     </div>
 
     <!-- Create Agent Modal (3-Step Verification Wizard) -->
@@ -1753,14 +1790,20 @@
         }
 
         function showSection(section) {
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
-                el.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
-            });
-            if (typeof event !== 'undefined' && event && event.target) {
-                event.target.closest('.nav-item').classList.add('bg-orange-500/10', 'text-orange-400', 'border-orange-500/20');
-                event.target.closest('.nav-item').classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-white/5');
+            if (typeof event !== 'undefined' && event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
             }
+
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const isActive = el.dataset.section === section;
+                el.classList.toggle('bg-orange-500/10', isActive);
+                el.classList.toggle('text-orange-400', isActive);
+                el.classList.toggle('border-orange-500/20', isActive);
+                el.classList.toggle('text-slate-300', !isActive);
+                el.classList.toggle('text-slate-400', !isActive);
+                el.classList.toggle('hover:text-white', !isActive);
+                el.classList.toggle('hover:bg-white/5', !isActive);
+            });
 
             document.getElementById('section-agents').classList.add('hidden');
             document.getElementById('section-audit').classList.add('hidden');
