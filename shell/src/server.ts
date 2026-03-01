@@ -23,7 +23,7 @@ import * as http from 'http';
 import { execFileSync } from 'child_process';
 import cookie from '@fastify/cookie';
 import { loadHistory, saveHistory, clearHistory } from './history';
-import { discoverSitesFromWorkspaces, deleteSiteWorkspace } from './sites';
+import { discoverSitesFromWorkspaces, deleteSiteWorkspace, deleteWebApp } from './sites';
 import { resolveDashboardStaticRoot } from './dashboard-static';
 
 const PORT = process.env.PORT || 3000;
@@ -62,6 +62,24 @@ export function regeneratePreviewPassword(agentId: number, port: number): { pass
     const generated = { password: generatePreviewPassword(), updatedAt: Date.now() };
     previewPasswords.set(previewKey(agentId, port), generated);
     return generated;
+}
+
+async function captureAppScreenshot(targetUrl: string, outputPath: string): Promise<void> {
+    let playwright: any;
+    try {
+        playwright = await import('playwright');
+    } catch {
+        throw new Error('Playwright is not installed in the shell runtime. Install "playwright" to enable app screenshots.');
+    }
+
+    const browser = await playwright.chromium.launch({ headless: true });
+    try {
+        const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+        await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 20000 });
+        await page.screenshot({ path: outputPath, fullPage: true });
+    } finally {
+        await browser.close();
+    }
 }
 
 export async function startServer() {
@@ -1036,6 +1054,19 @@ export async function startServer() {
         return { success: true };
     });
 
+    fastify.delete('/api/sites/:agentId/:userId/:siteName', async (request: any, reply: any) => {
+        const agentId = Number(request.params.agentId);
+        const userId = Number(request.params.userId);
+        const siteName = String(request.params.siteName || '');
+        if (!Number.isFinite(agentId) || !Number.isFinite(userId) || !siteName) {
+            return reply.code(400).send({ error: 'Invalid agentId/userId/siteName' });
+        }
+
+        const removed = deleteWebApp(WORKSPACE_DIR, agentId, userId, siteName);
+        if (!removed) return reply.code(404).send({ error: 'App not found' });
+        return { success: true };
+    });
+
     fastify.post('/api/sites/:agentId/:userId/:siteName/screenshot', async (request: any, reply: any) => {
         try {
             const { agentId, userId, siteName } = request.params;
@@ -1047,6 +1078,11 @@ export async function startServer() {
             
             const filename = `${agentId}_${userId}_${siteName}_${Date.now()}.png`;
             const screenshotPath = path.join(screenshotDir, filename);
+            const settings = await getAllSettings();
+            const baseUrl = settings.public_url || `http://127.0.0.1:${PORT}`;
+            const targetUrl = `${String(baseUrl).replace(/\/$/, '')}/preview/${agentId}/8080/${encodeURIComponent(siteName)}/`;
+
+            await captureAppScreenshot(targetUrl, screenshotPath);
             
             await createSiteScreenshot({
                 agent_id: Number(agentId),
@@ -1072,6 +1108,20 @@ export async function startServer() {
         } catch (e: any) {
             return reply.code(500).send({ error: e.message });
         }
+    });
+
+    fastify.get('/api/screenshots/:filename', async (request: any, reply: any) => {
+        const screenshotDir = path.join(__dirname, '../../data/screenshots');
+        const filename = String(request.params.filename || '');
+        const filePath = path.resolve(screenshotDir, filename);
+        const safeRoot = `${path.resolve(screenshotDir)}${path.sep}`;
+        if (!filePath.startsWith(safeRoot)) {
+            return reply.code(403).send({ error: 'Access denied' });
+        }
+        if (!fs.existsSync(filePath)) {
+            return reply.code(404).send({ error: 'Screenshot not found' });
+        }
+        return reply.sendFile(path.basename(filePath), screenshotDir);
     });
 
     fastify.post('/api/sites/:agentId/:userId/:siteName/tunnel', async (request: any, reply: any) => {

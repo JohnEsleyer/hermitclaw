@@ -21,7 +21,8 @@ Any file dropped into a Telegram chat with the bot (e.g., a `.csv`, `.py`, or `.
 
 ### 2. Outbound (Agent to User)
 When an agent creates a file it wants the user to see:
-- It simply copies or moves the file to `/app/workspace/out/`.
+- It writes the file to `/app/workspace/out/`.
+- It emits deterministic JSON output with `"action": "FILE:<filename>"`.
 - The Orchestrator's **Chokidar-based File Watcher** detects the add/write event.
 - It triggers `sendFileViaTelegram()`, which uploads the file back to the original Telegram chat as a document.
 

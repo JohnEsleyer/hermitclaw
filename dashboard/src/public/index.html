@@ -360,7 +360,7 @@
                         data-lucide="box" class="w-5 h-5"></i><span>Cubicles</span></a>
                 <a href="#" data-section="sites" onclick="showSection('sites')"
                     class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i
-                        data-lucide="globe" class="w-5 h-5"></i><span>Sites</span></a>
+                        data-lucide="globe" class="w-5 h-5"></i><span>Apps</span></a>
                 <a href="#" data-section="files" onclick="showSection('files')"
                     class="nav-item flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"><i
                         data-lucide="folder-open" class="w-5 h-5"></i><span>Files</span></a>
@@ -432,7 +432,7 @@
                                 class="w-4 h-4 inline mr-1"></i>Cubicles</a>
                         <a href="#" data-section="sites" onclick="showSection('sites')"
                             class="nav-item text-slate-300"><i data-lucide="globe"
-                                class="w-4 h-4 inline mr-1"></i>Sites</a>
+                                class="w-4 h-4 inline mr-1"></i>Apps</a>
                         <a href="#" data-section="files" onclick="showSection('files')"
                             class="nav-item text-slate-300"><i data-lucide="folder-open"
                                 class="w-4 h-4 inline mr-1"></i>Files</a>
@@ -562,23 +562,18 @@
                         </div>
                     </div>
 
-                    <!-- Sites Section -->
+                    <!-- Apps Section -->
                     <div id="section-sites" class="hidden">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-bold text-white flex items-center gap-2">
                                 <i data-lucide="globe" class="w-5 h-5 text-orange-500"></i>
-                                Sites (Workspace Web Apps)
+                                Apps (Workspace Web Apps)
                             </h3>
                             <div class="flex items-center gap-2">
-                                <button onclick="captureSiteScreenshot()"
-                                    class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2">
-                                    <i data-lucide="camera" class="w-4 h-4"></i>
-                                    Capture Screenshot
-                                </button>
                                 <button onclick="loadSites()"
                                     class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 border border-slate-700">
                                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                                    Refresh
+                                    Scan
                                 </button>
                             </div>
                         </div>
@@ -1981,7 +1976,7 @@
                 'settings': 'Settings',
                 'metrics': 'System Metrics',
                 'allowlist': 'User Allowlist',
-                'sites': 'Sites',
+                'sites': 'Apps',
                 'files': 'Files',
                 'calendars': 'Calendars',
                 'memories': 'Agent Memories'
@@ -2779,8 +2774,23 @@
             const grid = document.getElementById('sites-grid');
             if (!grid) return;
             try {
+                grid.innerHTML = '<div class="text-slate-400 text-sm">Scanning workspaces and apps...</div>';
                 const data = await fetch('/api/sites').then(r => r.json());
                 const sites = data.sites || [];
+                for (const site of sites) {
+                    for (const app of (site.webApps || [])) {
+                        try {
+                            await fetch(`/api/sites/${site.agentId}/${site.userId}/${app.siteName}/screenshot`, { method: 'POST' });
+                            const shotRes = await fetch(`/api/sites/${site.agentId}/${site.userId}/${app.siteName}/screenshot`);
+                            const shotData = await shotRes.json();
+                            const shotPath = shotData?.screenshot?.screenshot_path || '';
+                            if (shotPath) {
+                                const filename = String(shotPath).split('/').pop();
+                                app.screenshotUrl = filename ? `/api/screenshots/${filename}` : '';
+                            }
+                        } catch {}
+                    }
+                }
                 grid.innerHTML = SitesUI.renderSitesTable(sites);
 
                 grid.querySelectorAll('.js-copy-site-url').forEach(button => {
@@ -2824,6 +2834,22 @@
                         const body = await res.json();
                         if (!res.ok) {
                             alert(body.error || 'Failed to delete site');
+                            return;
+                        }
+                        await loadSites();
+                    });
+                });
+
+                grid.querySelectorAll('.js-delete-app').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const agentId = button.getAttribute('data-agent-id');
+                        const userId = button.getAttribute('data-user-id');
+                        const siteName = button.getAttribute('data-site-name');
+                        if (!confirm(`Delete app ${siteName}?`)) return;
+                        const res = await fetch(`/api/sites/${agentId}/${userId}/${siteName}`, { method: 'DELETE' });
+                        const body = await res.json();
+                        if (!res.ok) {
+                            alert(body.error || 'Failed to delete app');
                             return;
                         }
                         await loadSites();
@@ -2922,17 +2948,7 @@
             }
         }
         
-        async function captureSiteScreenshot() {
-            const selectedBtn = document.querySelector('.site-view-btn');
-            if (!selectedBtn) {
-                alert('Please click "View" on a site first to capture screenshot');
-                return;
-            }
-            
-            const agentId = selectedBtn.getAttribute('data-agent-id');
-            const userId = selectedBtn.getAttribute('data-user-id');
-            const siteName = selectedBtn.getAttribute('data-site-name') || 'default';
-            
+        async function captureSiteScreenshotFor(agentId, userId, siteName) {
             try {
                 const res = await fetch(`/api/sites/${agentId}/${userId}/${siteName}/screenshot`, { 
                     method: 'POST' 
@@ -2944,7 +2960,8 @@
                     return;
                 }
                 
-                alert('Screenshot captured! Path: ' + data.screenshotPath);
+                alert('Screenshot captured.');
+                await loadSites();
             } catch (e) {
                 alert('Failed to capture screenshot: ' + e.message);
             }

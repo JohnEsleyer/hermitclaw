@@ -25,8 +25,9 @@ A dedicated **Debian-based container** for each agent.
 | `/app/workspace/in/` | Files uploaded by user via Telegram |
 | `/app/workspace/out/` | Files auto-delivered to user via Telegram |
 | `/app/workspace/www/` | Web apps (each subfolder = separate app with index.html) |
+| `/app/workspace/data/` | Workspace databases (`calendar.db`, `rag.db`, future libsql files) |
 
-**Host-side databases** (accessible via `/app/workspace/../data/`):
+**Workspace databases** (accessible via `/app/workspace/data/`):
 - `calendar.db`: Scheduled events that trigger agent prompts
 - `rag.db`: Persistent RAG memory for facts and knowledge
 

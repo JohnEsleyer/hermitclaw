@@ -25,3 +25,8 @@ Welcome to the official documentation for **HermitShell**, the autonomous AI age
     *   Setting up the orchestrator, configuring Cloudflare Tunnels, and initializing agents.
 *   **[Contributing](./CONTRIBUTING.md)**
     *   Code style, testing procedures (Vitest), and adding new features.
+
+## 📝 Notes
+
+- The dashboard terminology uses **Apps** (formerly "Sites").
+- Agent/controller interaction uses a deterministic JSON contract with `userId`, `message`, `action`, `terminal`, and optional `panelActions`.

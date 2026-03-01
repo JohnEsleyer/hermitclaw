@@ -1,5 +1,6 @@
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::env;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -371,12 +372,11 @@ Your persistent workspace is organized into specialized folders:
    - Check here when user mentions uploading a file
 
 📤 OUT (Output): /app/workspace/out/
-   - Files you place here are AUTOMATICALLY delivered to the user via Telegram
-   - Simply save any file (PDF, CSV, image, video, etc.) to this folder
-   - The system detects new files instantly and sends them to the user
-   - Use this instead of attaching files manually
+   - Place final files here (PDF, CSV, images, videos, etc.)
+   - To send a specific file, return JSON with: "action": "FILE:<filename>"
+   - Only files inside /app/workspace/out/ are eligible for Telegram delivery
 
-🌐 WWW (Web Apps): /app/workspace/www/
+🌐 WWW (Apps): /app/workspace/www/
    - Contains web applications you create
    - Each SUBFOLDER is a separate web app (e.g., /app/workspace/www/myapp/)
    - Each web app MUST have an index.html file
@@ -384,9 +384,10 @@ Your persistent workspace is organized into specialized folders:
    - Start a web server on port 8080 to make it accessible
    - User can preview at: <tunnel_url>/preview/<agent_id>/8080/
 
-📊 DATA (Databases): /app/workspace/../data/
+📊 DATA (Databases): /app/workspace/data/
    - calendar.db: Stores your scheduled calendar events (future prompts)
    - rag.db: Persistent RAG memory for facts and knowledge
+   - future .db files may be added here; keep schema changes backwards-compatible
    - These databases survive container restarts
 
 Your Environment:
@@ -400,6 +401,7 @@ HERMITSHELL ARCHITECTURE & SCHEDULING:
 2. CALENDAR EVENTS: Use CALENDAR_CREATE to schedule future tasks
    - The system triggers your prompt at the scheduled time
    - For recurring tasks, schedule the NEXT event in your response
+3. Always assign a color for calendar events (hex, e.g. #f97316)
 
 TELEGRAM MESSAGE LIMIT:
 - Keep responses concise (~4096 char limit)
@@ -409,25 +411,23 @@ ASSET PROCUREMENT:
 - Need files from internet? Use ASSET_REQUEST:description|url|file_type
 - User approves/declines requests
 
-CAPABILITIES:
-1. COMMAND EXECUTION:
-   ACTION: EXECUTE
-   COMMAND: <your command>
+RESPONSE CONTRACT (MANDATORY):
+Return ONLY valid JSON. No markdown, no code fences.
+Schema:
+{{
+  "userId": "<telegram user id string>",
+  "message": "Short plain text for Telegram bubble",
+  "action": "" | "FILE:<filename.ext>",
+  "terminal": "" | "single shell command to execute in container",
+  "panelActions": ["CALENDAR_CREATE:title|prompt|start_time|end_time|color|symbol"]
+}}
 
-2. FILE DELIVERY:
-   FILE: /app/workspace/<filename>
-   Files in /app/workspace/out/ are automatically sent to user via Telegram.
-
-3. WEB APPLICATIONS:
-   - Create in /app/workspace/www/[app_name]/
-   - Must have index.html (vanilla HTML/CSS/JS only)
-   - Run on port 8080 for preview at <tunnel>/preview/<agent_id>/8080/
-
-4. CALENDAR ACTIONS (JSON):
-   {{
-     "message": "Text",
-     "panelActions": ["CALENDAR_CREATE:title|prompt|start_time|end_time"]
-   }}
+Rules:
+- message must be minimal and never markdown.
+- terminal command executes in container terminal and is not shown directly to user.
+- For future actions/events use calendar (panelActions) with an explicit color.
+- If no file should be sent, action must be empty string.
+- If no command should be executed, terminal must be empty string.
 
 Focus on security, efficiency, and completing the user's request.
 Do not try to escape the cubicle. Do not mention Docker to the user."#,
@@ -438,6 +438,18 @@ Do not try to escape the cubicle. Do not mention Docker to the user."#,
 }
 
 pub fn extract_command(response: &str) -> Option<String> {
+    if let Ok(parsed) = serde_json::from_str::<Value>(response) {
+        let terminal = parsed
+            .get("terminal")
+            .and_then(|v| v.as_str())
+            .map(|v| v.trim().to_string())
+            .unwrap_or_default();
+
+        if !terminal.is_empty() {
+            return Some(terminal);
+        }
+    }
+
     if !response.contains("ACTION: EXECUTE") {
         return None;
     }

@@ -34,11 +34,11 @@ HermitShell is a **Secure Agentic Operating System**. Each AI agent runs in a Do
 - **Container Labels**: Track cubicles with `hermitshell.*` Docker labels
 - **Agent Status Indicator**: Green (active) or amber/yellow (idle) status dots
 - **Calendar Events**: Schedule future tasks with CRON-based event system
-- **Sites Dashboard**: View and manage web apps created by agents
+- **Apps Dashboard**: View and manage web apps created by agents
 - **Site Preview Modal**: Preview sites in a modal with webview
 - **Tunnel Sharing**: Share temporary tunnel links for Telegram access
 - **Asset Procurement**: Request files from internet with user approval
-- **Screenshot Capture**: Capture Playwright screenshots of sites
+- **App Thumbnails**: Scan apps and capture Playwright screenshots for card thumbnails
 
 ## Architecture
 
@@ -50,7 +50,7 @@ HermitShell is a **Secure Agentic Operating System**. Each AI agent runs in a Do
 │  │  - Agent Management  - Budget Tracking  - Settings   │   │
 │  │  - Audit Logs       - Web Terminal    - Test Agent  │   │
 │  │  - Cubicles View    - Sync Bots       - File Browser│   │
-│  │  - Calendar Events  - Sites Dashboard - Memories    │   │
+│  │  - Calendar Events  - Apps Dashboard  - Memories    │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                           │                                 │
 │  ┌─────────────────────────────────────────────────────┐   │
@@ -363,16 +363,19 @@ Example: User says "Tomorrow at 9AM, analyze the data"
 Agent creates: CALENDAR_CREATE:Data Analysis|Analyze the CSV file|2026-02-28T09:00:00Z|
 ```
 
-### Sites Dashboard (Web Apps)
+### Apps Dashboard (Web Apps)
 
-The Sites dashboard shows web apps created by agents:
+The Apps dashboard shows web apps created by agents:
 
 - **Location**: Agents create web apps in `/workspace/www/[app_name]/`
 - **Each subfolder is a separate web app**
 - **Required**: Each web app MUST have an `index.html` file
 - **Vanilla Web**: Use plain HTML/CSS/JS (no frameworks like React/Vue)
-- **Preview**: Click "View" to open a modal with the site
+- **Scan**: Click "Scan" to detect apps from each workspace `www/` folder
+- **Preview**: Click "Open" to open a modal with the app
 - **Share**: Generate temporary tunnel links for Telegram sharing (30 min expiry)
+- **Thumbnail**: Apps can be screenshotted and displayed as card thumbnails
+- **Delete**: Remove one app folder or an entire workspace www set from the dashboard
 
 ### Asset Procurement System
 
@@ -384,11 +387,30 @@ Since agents are air-gapped, they can request assets from the internet:
 
 ### Screenshot Capture
 
-Sites can have Playwright screenshots captured:
+Apps can have Playwright screenshots captured:
 
-- Click "Capture Screenshot" in the Sites dashboard
+- Click "Screenshot" on an app card in the Apps dashboard
 - Screenshots are stored in `data/screenshots/`
 - Available for preview in the dashboard
+
+### Deterministic Agent JSON Contract
+
+Agent replies are expected to be machine-readable JSON (no markdown) so the controller can deterministically route actions:
+
+```json
+{
+  "userId": "123456789",
+  "message": "Done",
+  "action": "FILE:report.pdf",
+  "terminal": "python3 /app/workspace/work/script.py",
+  "panelActions": ["CALENDAR_CREATE:Title|Prompt|2026-03-01T10:00:00Z|2026-03-01T11:00:00Z|#f97316|⚙️"]
+}
+```
+
+- `message`: sent to Telegram chat bubble (plain text, minimal)
+- `action`: optional file send instruction from `/app/workspace/out/`
+- `terminal`: optional shell command for container execution
+- `panelActions`: optional control panel actions (calendar, assets, etc.)
 
 ### Long-Term RAG Memory
 

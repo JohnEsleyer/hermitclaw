@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-type AgentLike = { id: number; name: string; docker_image?: string | null };
+type AgentLike = { id: number; name: string; docker_image?: string | null; profile_picture_url?: string | null };
 
 export type WebApp = {
     agentId: number;
@@ -18,6 +18,8 @@ export type WebApp = {
     hasIndexHtml: boolean;
     hasStyles: boolean;
     files: string[];
+    profilePictureUrl?: string;
+    containerLabel: string;
 };
 
 export type SiteRecord = {
@@ -32,6 +34,8 @@ export type SiteRecord = {
     password?: string;
     passwordUpdatedAt?: string;
     webApps: WebApp[];
+    profilePictureUrl?: string;
+    containerLabel: string;
 };
 
 export type PasswordLookup = (agentId: number, port: number) => { password?: string; updatedAt?: number } | null;
@@ -113,7 +117,9 @@ export function discoverSitesFromWorkspaces(
                     passwordUpdatedAt: password?.updatedAt ? new Date(password.updatedAt).toISOString() : undefined,
                     hasIndexHtml,
                     hasStyles,
-                    files
+                    files,
+                    profilePictureUrl: agent?.profile_picture_url || '',
+                    containerLabel: ws.name
                 });
             }
         }
@@ -130,7 +136,9 @@ export function discoverSitesFromWorkspaces(
                 hasPassword: !!password?.password,
                 password: password?.password,
                 passwordUpdatedAt: password?.updatedAt ? new Date(password.updatedAt).toISOString() : undefined,
-                webApps
+                webApps,
+                profilePictureUrl: agent?.profile_picture_url || '',
+                containerLabel: ws.name
             });
         }
     }
@@ -156,5 +164,14 @@ export function deleteSiteWorkspace(workspaceDir: string, agentId: number, userI
         fs.rmSync(workspacePath, { recursive: true, force: true });
     }
 
+    return true;
+}
+
+export function deleteWebApp(workspaceDir: string, agentId: number, userId: number, siteName: string): boolean {
+    if (!Number.isFinite(agentId) || !Number.isFinite(userId) || !siteName) return false;
+    const workspaceName = `${Math.trunc(agentId)}_${Math.trunc(userId)}`;
+    const appPath = path.join(workspaceDir, workspaceName, 'www', siteName);
+    if (!fs.existsSync(appPath) || !fs.statSync(appPath).isDirectory()) return false;
+    fs.rmSync(appPath, { recursive: true, force: true });
     return true;
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { discoverSitesFromWorkspaces, deleteSiteWorkspace } from '../src/sites';
+import { discoverSitesFromWorkspaces, deleteSiteWorkspace, deleteWebApp } from '../src/sites';
 
 describe('discoverSitesFromWorkspaces', () => {
   it('returns only workspaces with visible www files', () => {
@@ -66,5 +66,20 @@ describe('discoverSitesFromWorkspaces', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermit-sites-'));
     const removed = deleteSiteWorkspace(root, 404, 505);
     expect(removed).toBe(false);
+  });
+
+  it('deletes one app folder without removing full www folder', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermit-sites-'));
+    const appA = path.join(root, '9_4', 'www', 'alpha');
+    const appB = path.join(root, '9_4', 'www', 'beta');
+    fs.mkdirSync(appA, { recursive: true });
+    fs.mkdirSync(appB, { recursive: true });
+    fs.writeFileSync(path.join(appA, 'index.html'), 'a');
+    fs.writeFileSync(path.join(appB, 'index.html'), 'b');
+
+    const removed = deleteWebApp(root, 9, 4, 'alpha');
+    expect(removed).toBe(true);
+    expect(fs.existsSync(appA)).toBe(false);
+    expect(fs.existsSync(appB)).toBe(true);
   });
 });

@@ -31,7 +31,8 @@ A lightweight **libSQL (SQLite compatibility)** implementation using `@libsql/cl
 
 ### 4. Telegram Bridge (`telegram.ts`)
 - `handleTelegramUpdate()`: Routes message, documents, and callback queries to the appropriate agent.
-- `startFileWatcher()`: Uses **Chokidar** to monitor each agent's `/out/` directory. When a file is detected, it is automatically uploaded to the user on Telegram.
+- `startFileWatcher()`: Uses **Chokidar** to monitor each agent's `/out/` directory.
+- `processAgentMessage()`: Parses deterministic JSON output (`message`, `action`, `terminal`, `panelActions`) and sends explicit `FILE:<name>` actions from `/out/`.
 - `sendApprovalRequest()`: Sends interactive buttons ("Approve" / "Deny") to the operator for HITL (Human-in-the-Loop) verification.
 - `startCalendarScheduler()`: CRON-based scheduler that triggers calendar events at specified times.
 
@@ -40,10 +41,11 @@ A lightweight **libSQL (SQLite compatibility)** implementation using `@libsql/cl
 - Syncs Telegram webhooks automatically when the tunnel URL changes.
 - Provides temporary tunnel URLs for site sharing (30-minute expiry).
 
-### 6. Sites Management (`sites.ts`)
+### 6. Apps Management (`sites.ts`)
 - Discovers web apps in workspace `www/` folders.
 - Each subfolder in `www/` is treated as a separate web app (must have `index.html`).
 - Validates web apps for `index.html` and CSS files.
+- Supports per-app deletion and app metadata for dashboard cards.
 
 ## 🌉 Internal LLM Proxy
 

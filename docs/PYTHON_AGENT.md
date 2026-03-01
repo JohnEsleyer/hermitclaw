@@ -40,8 +40,8 @@ The agent follows a standard Loop:
   - Web app creation (vanilla HTML/CSS/JS, index.html required)
   - ClawMotion for video creation
 - `call_llm()`: Uses Python's `urllib.request` to securely call the Orchestrator proxy. Since the container is air-gapped, this is the **only** way the agent can communicate with the outside world.
-- `extract_command()`: Uses regex and string parsing to identify the `ACTION: EXECUTE` block in the LLM's output.
-- `extract_panel_actions()`: Parses JSON at the end of responses for control panel actions.
+- `extract_command()`: Prioritizes JSON `terminal` command; legacy `ACTION: EXECUTE` remains as fallback compatibility.
+- `extract_panel_actions()`: Parses JSON output for control panel actions.
 - `is_dangerous()`: A list of restricted commands that trigger a Human-in-the-Loop check.
 - `wait_for_approval()`: Creates and monitors lock files (`/tmp/hermit_approval.lock`) that the Orchestrator writes when a user clicks an "Approve" button in Telegram or the Dashboard.
 
@@ -59,11 +59,14 @@ Workspace structure:
 
 ## 📝 Panel Actions
 
-Agents can trigger control panel actions by ending their response with JSON:
+Agents are expected to return deterministic JSON:
 
 ```json
 {
-  "message": "Task completed!",
+  "userId": "123456789",
+  "message": "Task completed",
+  "action": "FILE:report.pdf",
+  "terminal": "",
   "panelActions": ["CALENDAR_CREATE:Title|Prompt|2026-02-28T09:00:00Z|"]
 }
 ```

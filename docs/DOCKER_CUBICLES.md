@@ -25,24 +25,25 @@ The workspace is organized into specialized folders:
 - Agent can read these files to process data, summarize documents, or analyze code
 
 ### 3. 📤 `/app/workspace/out/` (Outgoing Portal)
-- Monitor by the **ed in real-timeOrchestrator's File Watcher**
-- Simply save any file here and it's automatically delivered to the user via Telegram
+- Monitored in real-time by the Orchestrator's file pipeline
+- Files can be delivered to Telegram through explicit agent JSON action `FILE:<filename>`
 - Works for PDFs, CSV, images, videos, or any file type
 
-### 4. 🌐 `/app/workspace/www/` (Web Apps Portal)
+### 4. 🌐 `/app/workspace/www/` (Apps Portal)
 - Contains web applications created by the agent
 - **Each subfolder is a separate web app** (e.g., `/app/workspace/www/myapp/`)
 - **Each web app MUST have an `index.html` file**
 - Use vanilla HTML, CSS, JavaScript only (no frameworks like React/Vue)
 - Start a web server on port 8080 for the user to preview
 
-### 5. 📊 Host Data Directory (`/app/workspace/../data/`)
-The host system manages these databases (do not modify directly):
+### 5. 📊 Workspace Data Directory (`/app/workspace/data/`)
+Workspace-local databases are stored here:
 
 | Database | Purpose |
 |----------|---------|
 | `calendar.db` | Stores scheduled calendar events (future prompts). When the time arrives, the system triggers your prompt automatically. |
 | `rag.db` | Persistent RAG memory for facts and knowledge. Survives container restarts. |
+| `*.db` | Future libSQL databases for additional capabilities. |
 
 ## 📜 Lifecycle of a Cubicle
 

@@ -3,6 +3,7 @@ import { processAgentMessage } from '../src/telegram';
 import * as docker from '../src/docker';
 import * as db from '../src/db';
 import * as history from '../src/history';
+import * as workspaceDb from '../src/workspace-db';
 
 // Mock the modules
 vi.mock('../src/docker', () => ({
@@ -44,6 +45,15 @@ vi.mock('../src/history', () => ({
     clearHistory: vi.fn()
 }));
 
+vi.mock('../src/workspace-db', () => ({
+    claimDueCalendarEvents: vi.fn(),
+    updateCalendarEvent: vi.fn(),
+    getCalendarEvents: vi.fn(() => []),
+    createCalendarEvent: vi.fn(() => 101),
+    deleteCalendarEvent: vi.fn(),
+    initWorkspaceDatabases: vi.fn()
+}));
+
 // Mock global fetch for Telegram API calls
 global.fetch = vi.fn(() => Promise.resolve({
     json: () => Promise.resolve({ ok: true })
@@ -80,11 +90,11 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Hi");
 
-        expect(db.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
+        expect(workspaceDb.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
             title: 'Test Event',
             prompt: 'Test Prompt',
             start_time: '2026-02-26T22:00:00Z'
-        }));
+        }), mockUserId);
 
         expect(result.output).toContain("Hello world");
         expect(result.output).toContain("✅ Created event #101");
@@ -101,7 +111,7 @@ describe('Agent Panel Actions and JSON Parsing', () => {
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Hi");
 
         expect(result.output).toBe(rawResponse);
-        expect(db.createCalendarEvent).not.toHaveBeenCalled();
+        expect(workspaceDb.createCalendarEvent).not.toHaveBeenCalled();
     });
 
     it('should handle CALENDAR_LIST action', async () => {
@@ -110,7 +120,7 @@ describe('Agent Panel Actions and JSON Parsing', () => {
             panelActions: ["CALENDAR_LIST"]
         };
 
-        (db.getCalendarEvents as any).mockResolvedValue([
+        (workspaceDb.getCalendarEvents as any).mockResolvedValue([
             { id: 1, title: 'Event 1', start_time: '2026-01-01', status: 'scheduled' }
         ]);
 
@@ -121,7 +131,7 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "List events");
 
-        expect(db.getCalendarEvents).toHaveBeenCalledWith(1);
+        expect(workspaceDb.getCalendarEvents).toHaveBeenCalledWith(1, mockUserId);
         expect(result.output).toContain("Listing your events");
         expect(result.output).toContain("Event 1");
     });
@@ -139,11 +149,11 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Update event 42");
 
-        expect(db.updateCalendarEvent).toHaveBeenCalledWith(42, expect.objectContaining({
+        expect(workspaceDb.updateCalendarEvent).toHaveBeenCalledWith(42, 1, expect.objectContaining({
             title: 'New Title',
             prompt: 'New Prompt',
             start_time: '2026-03-01T10:00:00Z'
-        }));
+        }), mockUserId);
         expect(result.output).toContain("✅ Updated event #42");
     });
 
@@ -159,7 +169,7 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Delete event 99");
 
-        expect(db.deleteCalendarEvent).toHaveBeenCalledWith(99);
+        expect(workspaceDb.deleteCalendarEvent).toHaveBeenCalledWith(99, 1, mockUserId);
         expect(result.output).toContain("✅ Deleted event #99");
     });
 
@@ -176,12 +186,12 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Hi");
 
-        expect(db.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
+        expect(workspaceDb.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
             title: 'Complex Event',
             prompt: 'This is a prompt | with pipes | in it',
             start_time: '2026-02-27T10:00:00Z',
             end_time: null
-        }));
+        }), mockUserId);
     });
 
     it('should handle CALENDAR_CREATE with exactly 3 parts (title|prompt|start)', async () => {
@@ -196,11 +206,11 @@ describe('Agent Panel Actions and JSON Parsing', () => {
 
         const result = await processAgentMessage(mockToken, mockChatId, mockUserId, "Hi");
 
-        expect(db.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
+        expect(workspaceDb.createCalendarEvent).toHaveBeenCalledWith(expect.objectContaining({
             title: 'Simple',
             prompt: 'Do something',
             start_time: '2026-02-27T10:00:00Z',
             end_time: null
-        }));
+        }), mockUserId);
     });
 });

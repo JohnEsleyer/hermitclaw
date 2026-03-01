@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import * as chokidar from 'chokidar';
 import { loadHistory, saveHistory, clearHistory } from './history';
 import { setPreviewPassword } from './server';
+import { parseAgentResponse, parseFileAction } from './agent-response';
 
 interface TelegramUpdate {
     message?: {
@@ -413,24 +414,6 @@ export async function processAgentMessage(
             }
         });
 
-        // 📎 Proactive File Delivery: Check the /out folder immediately after execution
-        try {
-            const outPath = path.join(WORKSPACE_DIR, `${agent.id}_${userId}`, 'out');
-            if (fs.existsSync(outPath)) {
-                const files = fs.readdirSync(outPath);
-                for (const file of files) {
-                    const fullPath = path.join(outPath, file);
-                    if (fs.statSync(fullPath).isFile() && !processedFiles.has(fullPath)) {
-                        processedFiles.add(fullPath);
-                        await sendFileViaTelegram(token, chatId, fullPath, `📎 ${file} (Direct)`);
-                        setTimeout(() => processedFiles.delete(fullPath), 30000);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('[ProactiveFile] Error checking out folder:', e);
-        }
-
         if (result.output.includes('401') && (result.output.includes('Unauthorized') || result.output.includes('Authentication'))) {
             result.output = `❌ *API Key Error (401 Unauthorized)*\n\nYour API key is either missing or invalid for this provider.\n\n*How to fix:*\n1. Open Dashboard -> Settings\n2. Enter a valid API key\n3. Click "Save All Settings"\n4. Send \`/reset\` here to delete this broken cubicle and apply your new keys!`;
         }
@@ -469,44 +452,29 @@ export async function processAgentMessage(
             }
         }
 
-        // --- NEW JSON PARSING AND PANEL ACTIONS LOGIC ---
         let finalOutput = result.output;
-        try {
-            const firstBrace = result.output.indexOf('{');
-            const lastBrace = result.output.lastIndexOf('}');
-            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                const jsonStr = result.output.substring(firstBrace, lastBrace + 1);
-                const parsed = JSON.parse(jsonStr);
-
-                if (parsed.message) {
-                    finalOutput = parsed.message;
-                }
-
-                if (parsed.files && Array.isArray(parsed.files)) {
-                    const outPath = path.join(WORKSPACE_DIR, `${agent.id}_${userId}`, 'out');
-                    for (const fileName of parsed.files) {
-                        const filePath = path.join(outPath, fileName);
-                        if (fs.existsSync(filePath)) {
-                            // Only send if it wasn't already sent by the proactive check or watcher
-                            if (!processedFiles.has(filePath)) {
-                                processedFiles.add(filePath);
-                                await sendFileViaTelegram(token, chatId, filePath, `📎 ${fileName}`);
-                            }
-                        }
-                    }
-                }
-
-                if (parsed.panelActions && Array.isArray(parsed.panelActions)) {
-                    const actionResults = await executePanelActions(agent.id, userId, parsed.panelActions);
-                    if (actionResults.length > 0) {
-                        finalOutput += "\n\n" + actionResults.join('\n');
-                    }
-                }
-            }
-        } catch (e) {
-            // Not JSON or parse error, fallback to raw output
+        const parsed = parseAgentResponse(result.output);
+        if (parsed.message) {
+            finalOutput = parsed.message;
         }
-        // ------------------------------------------------
+
+        const selectedFile = parseFileAction(parsed.action);
+        if (selectedFile) {
+            const outPath = path.join(WORKSPACE_DIR, `${agent.id}_${userId}`, 'out');
+            const filePath = path.join(outPath, selectedFile);
+            if (fs.existsSync(filePath) && fs.statSync(filePath).isFile() && !processedFiles.has(filePath)) {
+                processedFiles.add(filePath);
+                await sendFileViaTelegram(token, chatId, filePath, `📎 ${selectedFile}`);
+                setTimeout(() => processedFiles.delete(filePath), 30000);
+            }
+        }
+
+        if (parsed.panelActions.length > 0) {
+            const actionResults = await executePanelActions(agent.id, userId, parsed.panelActions);
+            if (actionResults.length > 0) {
+                finalOutput += "\n\n" + actionResults.join('\n');
+            }
+        }
 
         const estimatedCost = result.output.length * 0.00001;
         await updateSpend(agent.id, estimatedCost);
@@ -1245,7 +1213,9 @@ async function handleFileUpload(token: string, agent: any, userId: number, messa
         const downloadResponse = await fetch(downloadUrl);
         const buffer = Buffer.from(await downloadResponse.arrayBuffer());
 
-        const savePath = path.join(workspacePath, fileName);
+        const inboundDir = path.join(workspacePath, 'in');
+        fs.mkdirSync(inboundDir, { recursive: true });
+        const savePath = path.join(inboundDir, fileName);
         fs.writeFileSync(savePath, buffer);
 
         return `✅ *File uploaded successfully!*\n\n📄 \`${fileName}\`\nSaved to workspace. I can now access it.`;
